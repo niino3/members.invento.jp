@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { createService, updateService } from '@/lib/firebase/services';
 import { getServiceCategories } from '@/lib/firebase/serviceCategories';
@@ -209,9 +210,9 @@ export default function ServiceForm({ service, isEdit = false }: ServiceFormProp
             {categories.length === 0 && (
               <p className="mt-1 text-xs text-gray-500">
                 利用可能なカテゴリーがありません。
-                <a href="/admin/service-categories/new" className="text-indigo-600 hover:text-indigo-500 ml-1">
+                <Link href="/admin/service-categories/new" className="text-indigo-600 hover:text-indigo-500 ml-1">
                   カテゴリーを作成
-                </a>
+                </Link>
               </p>
             )}
           </div>
