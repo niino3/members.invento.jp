@@ -27,14 +27,9 @@ export async function POST(req: NextRequest) {
           },
           tls: {
             rejectUnauthorized: false, // 自己署名証明書を許可
-            minVersion: 'TLSv1.2', // TLS 1.2以上を使用
-            maxVersion: 'TLSv1.3', // TLS 1.3まで許可
-            ciphers: [
-              'ECDHE-RSA-AES128-GCM-SHA256',
-              'ECDHE-RSA-AES256-GCM-SHA384',
-              'ECDHE-RSA-AES128-SHA256',
-              'ECDHE-RSA-AES256-SHA384'
-            ].join(':')
+            servername: process.env.SMTP_HOST, // SNI設定
+            minDHSize: 1024, // DH鍵の最小サイズを設定
+            ciphers: 'DEFAULT@SECLEVEL=0' // 古いサーバーとの互換性を確保
           }
         });
 
