@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
         });
 
         const customerEmail = { 
-          data: null, 
+          data: { id: null }, 
           error: 'Domain verification required for customer emails' 
         };
 
