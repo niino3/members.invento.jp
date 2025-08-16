@@ -70,20 +70,38 @@ export async function POST(req: NextRequest) {
         console.log('Customer email:', inquiry.customerEmail);
         console.log('Admin email:', adminEmailAddress);
         
-        const [customerEmail, adminEmail] = await Promise.all([
-          resend.emails.send({
-            from: 'Invento <onboarding@resend.dev>', // テスト用アドレス
-            to: inquiry.customerEmail,
-            subject: `【お問い合わせ受付完了】${inquiry.subject}`,
-            html: customerEmailHtml,
-          }),
-          resend.emails.send({
-            from: 'Invento <onboarding@resend.dev>', // テスト用アドレス
-            to: adminEmailAddress,
-            subject: `【新規問い合わせ】${inquiry.companyName} - ${inquiry.subject}`,
-            html: adminEmailHtml,
-          }),
-        ]);
+        // Resendの制限により、現在は管理者メールのみ送信
+        // 顧客メールは実装後に有効化
+        const adminEmail = await resend.emails.send({
+          from: 'Invento <onboarding@resend.dev>',
+          to: adminEmailAddress,
+          subject: `【新規問い合わせ】${inquiry.companyName} - ${inquiry.subject}`,
+          html: `
+            <h2>新規問い合わせがありました</h2>
+            
+            <h3>顧客情報</h3>
+            <p><strong>会社名：</strong>${inquiry.companyName}</p>
+            <p><strong>お名前：</strong>${inquiry.customerName}</p>
+            <p><strong>メール：</strong>${inquiry.customerEmail}</p>
+            
+            <h3>問い合わせ内容</h3>
+            <p><strong>件名：</strong>${inquiry.subject}</p>
+            <p><strong>カテゴリー：</strong>${inquiry.categoryLabel}</p>
+            <p><strong>内容：</strong></p>
+            <pre style="white-space: pre-wrap;">${inquiry.content}</pre>
+            
+            <hr>
+            <p><strong>注意：</strong>顧客確認メールはドメイン認証後に送信されます。</p>
+            <p>現在は管理者通知のみ送信されています。</p>
+            
+            <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/inquiries">管理画面で確認する</a></p>
+          `,
+        });
+
+        const customerEmail = { 
+          data: null, 
+          error: 'Domain verification required for customer emails' 
+        };
 
         console.log('Resend API Response - Customer Email:', JSON.stringify(customerEmail, null, 2));
         console.log('Resend API Response - Admin Email:', JSON.stringify(adminEmail, null, 2));
