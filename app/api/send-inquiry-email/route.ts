@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 
 export async function POST(req: NextRequest) {
+  // OpenSSLのセキュリティレベルを一時的に下げる
+  process.env.NODE_OPTIONS = '--openssl-legacy-provider';
+  
   try {
     const { inquiry, type } = await req.json();
     
@@ -28,8 +31,9 @@ export async function POST(req: NextRequest) {
           tls: {
             rejectUnauthorized: false, // 自己署名証明書を許可
             servername: process.env.SMTP_HOST, // SNI設定
-            minDHSize: 1024, // DH鍵の最小サイズを設定
-            ciphers: 'DEFAULT@SECLEVEL=0' // 古いサーバーとの互換性を確保
+            minDHSize: 512, // DH鍵の最小サイズをさらに下げる
+            ciphers: 'DEFAULT:!DH', // DHを無効化してECDHEのみ使用
+            secureOptions: require('constants').SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION
           }
         });
 
