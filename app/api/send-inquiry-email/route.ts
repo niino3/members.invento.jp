@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 管理者メールアドレス（環境変数から取得）
-    const adminEmail = process.env.ADMIN_EMAIL || 'admin@fortissimo.co.jp';
+    const adminEmailAddress = process.env.ADMIN_EMAIL || 'admin@fortissimo.co.jp';
 
     if (type === 'new') {
       try {
@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
           }),
           resend.emails.send({
             from: process.env.FROM_EMAIL || 'Invento <onboarding@resend.dev>',
-            to: adminEmail,
+            to: adminEmailAddress,
             subject: `【新規問い合わせ】${inquiry.companyName} - ${inquiry.subject}`,
             html: adminEmailHtml,
           }),
