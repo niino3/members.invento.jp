@@ -27,7 +27,14 @@ export async function POST(req: NextRequest) {
           },
           tls: {
             rejectUnauthorized: false, // 自己署名証明書を許可
-            ciphers: 'SSLv3'
+            minVersion: 'TLSv1.2', // TLS 1.2以上を使用
+            maxVersion: 'TLSv1.3', // TLS 1.3まで許可
+            ciphers: [
+              'ECDHE-RSA-AES128-GCM-SHA256',
+              'ECDHE-RSA-AES256-GCM-SHA384',
+              'ECDHE-RSA-AES128-SHA256',
+              'ECDHE-RSA-AES256-SHA384'
+            ].join(':')
           }
         });
 
