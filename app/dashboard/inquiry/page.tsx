@@ -71,7 +71,7 @@ export default function InquiryPage() {
       // Create inquiry in Firestore
       const inquiryId = await createInquiry({
         customerId: customer.id,
-        customerEmail: customer.email,
+        customerEmail: customer.email || '',
         customerName: customer.contactName,
         companyName: customer.companyName,
         category,
