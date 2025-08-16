@@ -88,6 +88,14 @@ export async function POST(req: NextRequest) {
         console.log('Resend API Response - Customer Email:', JSON.stringify(customerEmail, null, 2));
         console.log('Resend API Response - Admin Email:', JSON.stringify(adminEmail, null, 2));
         
+        // エラーをチェック
+        if (customerEmail.error) {
+          console.error('Customer email error:', customerEmail.error);
+        }
+        if (adminEmail.error) {
+          console.error('Admin email error:', adminEmail.error);
+        }
+        
         console.log('Inquiry emails sent successfully:', {
           customerEmailId: customerEmail.data?.id,
           adminEmailId: adminEmail.data?.id,
