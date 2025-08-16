@@ -21,19 +21,24 @@ export async function POST(req: NextRequest) {
     if (type === 'new') {
       try {
         // SMTP設定（環境変数から取得）
+        // ポート25を試す（TLSなし）
+        const port = parseInt(process.env.SMTP_PORT || '587');
+        const isPort25 = port === 25;
+        
         const transporter = nodemailer.createTransport({
           host: process.env.SMTP_HOST,
-          port: parseInt(process.env.SMTP_PORT || '587'),
-          secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+          port: port,
+          secure: false, // ポート25では常にfalse
+          ignoreTLS: isPort25, // ポート25の場合はTLSを完全に無効化
           auth: {
             user: process.env.SMTP_USER,
             pass: process.env.SMTP_PASSWORD,
           },
-          tls: {
-            rejectUnauthorized: false, // 自己署名証明書を許可
-            servername: process.env.SMTP_HOST, // SNI設定
-            minDHSize: 512, // DH鍵の最小サイズをさらに下げる
-            ciphers: 'DEFAULT:!DH', // DHを無効化してECDHEのみ使用
+          tls: isPort25 ? undefined : {
+            rejectUnauthorized: false,
+            servername: process.env.SMTP_HOST,
+            minDHSize: 512,
+            ciphers: 'DEFAULT:!DH',
             secureOptions: constants.SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION
           }
         });
