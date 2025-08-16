@@ -1,0 +1,152 @@
+# 顧客管理システム
+
+## プロジェクト概要
+
+自社用顧客管理システム（members.invento.jp）の開発プロジェクト
+
+### 主な特徴
+- 基本的な顧客管理機能
+- サービス登録・管理機能
+- サービス毎の機能拡張性
+- 管理者とユーザー向けの2つのインターフェース
+
+### 技術スタック
+- **フレームワーク**: Next.js (App Router)
+- **言語**: TypeScript
+- **UI**: Tailwind CSS
+- **認証**: Firebase Authentication
+- **データベース**: Firebase Firestore
+- **ホスティング**: Firebase Hosting
+- **サーバーレス関数**: Firebase Functions
+- **ドメイン**: members.invento.jp
+
+## 機能要件
+
+### 管理者向け機能
+- 顧客管理（一覧、検索、登録、編集、削除）
+- サービス管理（追加、変更、削除）
+
+### ユーザー向け機能
+- ログイン・パスワードリマインダー
+- ダッシュボード
+- 契約内容確認
+- 請求・支払い履歴
+- 契約プラン変更申請
+- 問い合わせフォーム
+
+### 顧客情報項目
+- 法人個人種別
+- 社名（必須）
+- 名前（必須）
+- 郵便番号
+- 住所-1、住所-2
+- 転送先郵便番号
+- 転送先住所-1、転送先住所-2
+- 電話番号
+- メールアドレス
+- 契約開始日・終了日
+- 支払い方法（振込、PayPal）
+- 専用電話番号
+- 専用電話転送先番号
+- 請求書送付有無
+- 請求書送付方法（メール、郵送）
+- 利用サービス（複数可）
+
+## 開発フェーズ
+
+### フェーズ1: 開発環境構築とプロジェクト初期設定
+- Next.js (App Router) プロジェクト作成
+- TypeScript設定
+- Tailwind CSS導入
+- Firebase SDK初期設定
+- 基本的なディレクトリ構造の確立
+
+### フェーズ2: 認証基盤
+- Firebase Authentication設定
+- ログイン/サインアップページ実装
+- パスワードリセット機能
+- 認証状態管理（Context/Hook）
+- 認証ガード実装
+
+### フェーズ3: データベース設計とFirestore統合
+- Firestoreコレクション設計（customers, services, billing等）
+- 型定義とインターフェース作成
+- データアクセス層の実装
+- 基本的なCRUD操作の実装
+
+### フェーズ4: 管理者向け顧客管理機能
+- 管理者レイアウト作成
+- 顧客一覧画面
+- 顧客検索機能
+- 顧客詳細・編集・削除機能
+- 全フィールドに対応したフォーム実装
+
+### フェーズ5: 管理者向けサービス管理機能
+- サービス一覧画面
+- サービス追加・編集・削除機能
+- サービスと顧客の紐付け管理
+
+### フェーズ6: ユーザーダッシュボード
+- ユーザー用レイアウト作成
+- マイページ実装
+- 契約内容表示
+- 請求・支払い履歴表示
+
+### フェーズ7: ユーザー向け追加機能
+- 契約プラン変更申請フォーム
+- 問い合わせフォーム
+- 通知機能
+
+### フェーズ8: デプロイ設定とドメイン設定
+- Firebase Hosting設定
+- Firebase Functions設定（SSR対応）
+- 環境変数管理
+- カスタムドメイン（members.invento.jp）設定
+- セキュリティ設定
+
+## 推奨開発期間
+各フェーズ1-2週間（合計2-3ヶ月）
+
+## 開発開始方法
+
+```bash
+# プロジェクトのクローン
+git clone [repository-url]
+
+# 依存関係のインストール
+npm install
+
+# Firebase CLIのインストール
+npm install -g firebase-tools
+
+# Firebaseへのログイン
+firebase login
+
+# 開発サーバーの起動
+npm run dev
+```
+
+## 環境変数
+`.env.local`ファイルに以下の環境変数を設定してください：
+
+```env
+NEXT_PUBLIC_FIREBASE_API_KEY=
+NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=
+NEXT_PUBLIC_FIREBASE_PROJECT_ID=
+NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=
+NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=
+NEXT_PUBLIC_FIREBASE_APP_ID=
+```
+
+## デプロイ方法
+
+```bash
+# ビルド
+npm run build
+
+# Firebase Hostingへデプロイ
+firebase deploy
+```
+
+## ライセンス
+プライベートプロジェクト
