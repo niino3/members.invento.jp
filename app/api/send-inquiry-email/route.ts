@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import nodemailer from 'nodemailer';
-import { constants } from 'crypto';
+import { Resend } from 'resend';
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(req: NextRequest) {
-  // OpenSSLのセキュリティレベルを一時的に下げる
-  process.env.NODE_OPTIONS = '--openssl-legacy-provider';
-  
   try {
     const { inquiry, type } = await req.json();
     
@@ -20,93 +18,68 @@ export async function POST(req: NextRequest) {
 
     if (type === 'new') {
       try {
-        // SMTP設定（環境変数から取得）
-        // ポート25を試す（TLSなし）
-        const port = parseInt(process.env.SMTP_PORT || '587');
-        const isPort25 = port === 25;
-        
-        const transporter = nodemailer.createTransport({
-          host: process.env.SMTP_HOST,
-          port: port,
-          secure: false, // ポート25では常にfalse
-          ignoreTLS: isPort25, // ポート25の場合はTLSを完全に無効化
-          auth: {
-            user: process.env.SMTP_USER,
-            pass: process.env.SMTP_PASSWORD,
-          },
-          tls: isPort25 ? undefined : {
-            rejectUnauthorized: false,
-            servername: process.env.SMTP_HOST,
-            minDHSize: 512,
-            ciphers: 'DEFAULT:!DH',
-            secureOptions: constants.SSL_OP_ALLOW_UNSAFE_LEGACY_RENEGOTIATION
-          }
-        });
-
-        console.log('Email configuration:', {
-          host: process.env.SMTP_HOST,
-          port: process.env.SMTP_PORT,
-          user: process.env.SMTP_USER,
-          hasPassword: !!process.env.SMTP_PASSWORD,
-          adminEmail: process.env.ADMIN_EMAIL,
-        });
+        console.log('Sending emails with Resend...');
 
         // 顧客への確認メール
-        const customerMailOptions = {
-          from: process.env.FROM_EMAIL || 'noreply@fortissimo.co.jp',
-          to: inquiry.customerEmail,
-          subject: `【お問い合わせ受付完了】${inquiry.subject}`,
-          html: `
-            <h2>お問い合わせを受け付けました</h2>
-            <p>${inquiry.customerName} 様</p>
-            <p>お問い合わせいただきありがとうございます。<br>
-            以下の内容で承りました。担当者より順次回答させていただきますので、今しばらくお待ちください。</p>
-            
-            <hr>
-            <h3>お問い合わせ内容</h3>
-            <p><strong>件名：</strong>${inquiry.subject}</p>
-            <p><strong>カテゴリー：</strong>${inquiry.categoryLabel}</p>
-            <p><strong>内容：</strong></p>
-            <pre style="white-space: pre-wrap;">${inquiry.content}</pre>
-            <hr>
-            
-            <p>このメールは自動送信されています。<br>
-            お問い合わせの内容によってはお返事にお時間をいただく場合がございます。</p>
-            
-            <p>よろしくお願いいたします。</p>
-          `,
-        };
+        const customerEmailHtml = `
+          <h2>お問い合わせを受け付けました</h2>
+          <p>${inquiry.customerName} 様</p>
+          <p>お問い合わせいただきありがとうございます。<br>
+          以下の内容で承りました。担当者より順次回答させていただきますので、今しばらくお待ちください。</p>
+          
+          <hr>
+          <h3>お問い合わせ内容</h3>
+          <p><strong>件名：</strong>${inquiry.subject}</p>
+          <p><strong>カテゴリー：</strong>${inquiry.categoryLabel}</p>
+          <p><strong>内容：</strong></p>
+          <pre style="white-space: pre-wrap;">${inquiry.content}</pre>
+          <hr>
+          
+          <p>このメールは自動送信されています。<br>
+          お問い合わせの内容によってはお返事にお時間をいただく場合がございます。</p>
+          
+          <p>よろしくお願いいたします。</p>
+        `;
 
         // 管理者への通知メール
-        const adminMailOptions = {
-          from: process.env.FROM_EMAIL || 'noreply@fortissimo.co.jp',
-          to: adminEmail,
-          subject: `【新規問い合わせ】${inquiry.companyName} - ${inquiry.subject}`,
-          html: `
-            <h2>新規問い合わせがありました</h2>
-            
-            <h3>顧客情報</h3>
-            <p><strong>会社名：</strong>${inquiry.companyName}</p>
-            <p><strong>お名前：</strong>${inquiry.customerName}</p>
-            <p><strong>メール：</strong>${inquiry.customerEmail}</p>
-            
-            <h3>問い合わせ内容</h3>
-            <p><strong>件名：</strong>${inquiry.subject}</p>
-            <p><strong>カテゴリー：</strong>${inquiry.categoryLabel}</p>
-            <p><strong>内容：</strong></p>
-            <pre style="white-space: pre-wrap;">${inquiry.content}</pre>
-            
-            <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/inquiries">管理画面で確認する</a></p>
-          `,
-        };
+        const adminEmailHtml = `
+          <h2>新規問い合わせがありました</h2>
+          
+          <h3>顧客情報</h3>
+          <p><strong>会社名：</strong>${inquiry.companyName}</p>
+          <p><strong>お名前：</strong>${inquiry.customerName}</p>
+          <p><strong>メール：</strong>${inquiry.customerEmail}</p>
+          
+          <h3>問い合わせ内容</h3>
+          <p><strong>件名：</strong>${inquiry.subject}</p>
+          <p><strong>カテゴリー：</strong>${inquiry.categoryLabel}</p>
+          <p><strong>内容：</strong></p>
+          <pre style="white-space: pre-wrap;">${inquiry.content}</pre>
+          
+          <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/inquiries">管理画面で確認する</a></p>
+        `;
 
-        // メール送信
-        await Promise.all([
-          transporter.sendMail(customerMailOptions),
-          transporter.sendMail(adminMailOptions),
+        // Resendでメール送信
+        const [customerEmail, adminEmail] = await Promise.all([
+          resend.emails.send({
+            from: process.env.FROM_EMAIL || 'Invento <onboarding@resend.dev>',
+            to: inquiry.customerEmail,
+            subject: `【お問い合わせ受付完了】${inquiry.subject}`,
+            html: customerEmailHtml,
+          }),
+          resend.emails.send({
+            from: process.env.FROM_EMAIL || 'Invento <onboarding@resend.dev>',
+            to: adminEmail,
+            subject: `【新規問い合わせ】${inquiry.companyName} - ${inquiry.subject}`,
+            html: adminEmailHtml,
+          }),
         ]);
 
-        console.log('Inquiry emails sent successfully');
+        console.log('Inquiry emails sent successfully:', {
+          customerEmailId: customerEmail.data?.id,
+          adminEmailId: adminEmail.data?.id
+        });
+        
         return NextResponse.json({ success: true, message: 'Emails sent successfully' });
       } catch (mailError) {
         console.error('Email send error:', mailError);
