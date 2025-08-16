@@ -8,6 +8,8 @@ export async function POST(req: NextRequest) {
     const { inquiry, type } = await req.json();
     
     console.log('Email API called with:', { inquiry, type });
+    console.log('Resend API Key:', process.env.RESEND_API_KEY ? 'Set (length: ' + process.env.RESEND_API_KEY.length + ')' : 'Not set');
+    console.log('Admin Email:', process.env.ADMIN_EMAIL);
 
     if (!inquiry || !type) {
       return NextResponse.json({ error: 'Inquiry data and type are required' }, { status: 400 });
@@ -19,6 +21,10 @@ export async function POST(req: NextRequest) {
     if (type === 'new') {
       try {
         console.log('Sending emails with Resend...');
+        console.log('Sending to:', {
+          customer: inquiry.customerEmail,
+          admin: adminEmailAddress
+        });
 
         // 顧客への確認メール
         const customerEmailHtml = `
@@ -60,6 +66,10 @@ export async function POST(req: NextRequest) {
         `;
 
         // Resendでメール送信
+        console.log('Attempting to send emails...');
+        console.log('Customer email:', inquiry.customerEmail);
+        console.log('Admin email:', adminEmailAddress);
+        
         const [customerEmail, adminEmail] = await Promise.all([
           resend.emails.send({
             from: 'Invento <onboarding@resend.dev>', // テスト用アドレス
@@ -75,9 +85,14 @@ export async function POST(req: NextRequest) {
           }),
         ]);
 
+        console.log('Resend API Response - Customer Email:', JSON.stringify(customerEmail, null, 2));
+        console.log('Resend API Response - Admin Email:', JSON.stringify(adminEmail, null, 2));
+        
         console.log('Inquiry emails sent successfully:', {
           customerEmailId: customerEmail.data?.id,
-          adminEmailId: adminEmail.data?.id
+          adminEmailId: adminEmail.data?.id,
+          customerEmailError: customerEmail.error,
+          adminEmailError: adminEmail.error
         });
         
         return NextResponse.json({ success: true, message: 'Emails sent successfully' });
