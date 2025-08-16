@@ -12,7 +12,7 @@ import { Service } from '@/types/service';
 import { ServiceCategory } from '@/types/serviceCategory';
 
 export default function ContractsPage() {
-  const { user, loading } = useAuth();
+  const { user, loading, signOut } = useAuth();
   const router = useRouter();
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [services, setServices] = useState<Service[]>([]);
@@ -93,8 +93,7 @@ export default function ContractsPage() {
 
   const handleSignOut = async () => {
     try {
-      const { signOut } = await import('@/contexts/AuthContext');
-      // Note: This would need to be properly imported from useAuth
+      await signOut();
       router.push('/login');
     } catch (error) {
       console.error('Sign out error:', error);
