@@ -62,13 +62,13 @@ export async function POST(req: NextRequest) {
         // Resendでメール送信
         const [customerEmail, adminEmail] = await Promise.all([
           resend.emails.send({
-            from: process.env.FROM_EMAIL || 'Invento <onboarding@resend.dev>',
+            from: 'Invento <onboarding@resend.dev>', // テスト用アドレス
             to: inquiry.customerEmail,
             subject: `【お問い合わせ受付完了】${inquiry.subject}`,
             html: customerEmailHtml,
           }),
           resend.emails.send({
-            from: process.env.FROM_EMAIL || 'Invento <onboarding@resend.dev>',
+            from: 'Invento <onboarding@resend.dev>', // テスト用アドレス
             to: adminEmailAddress,
             subject: `【新規問い合わせ】${inquiry.companyName} - ${inquiry.subject}`,
             html: adminEmailHtml,
