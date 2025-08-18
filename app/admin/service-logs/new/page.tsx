@@ -43,12 +43,12 @@ export default function NewServiceLogPage() {
       if (!user || user.role !== 'admin') return;
       
       try {
-        const [customersData, servicesData] = await Promise.all([
+        const [customersResult, servicesData] = await Promise.all([
           getCustomers(),
           getServices(),
         ]);
         
-        setCustomers(customersData);
+        setCustomers(customersResult.customers);
         // ログ記録が有効なサービスのみ
         setServices(servicesData.filter(s => s.logEnabled));
       } catch (error) {

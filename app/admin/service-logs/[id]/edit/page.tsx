@@ -64,12 +64,12 @@ export default function EditServiceLogPage() {
         });
         
         // 関連データを取得
-        const [customersData, servicesData] = await Promise.all([
+        const [customersResult, servicesData] = await Promise.all([
           getCustomers(),
           getServices(),
         ]);
         
-        const customerData = customersData.find(c => c.id === log.customerId);
+        const customerData = customersResult.customers.find(c => c.id === log.customerId);
         const serviceData = servicesData.find(s => s.id === log.serviceId);
         
         setCustomer(customerData || null);

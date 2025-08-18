@@ -42,14 +42,14 @@ export default function ServiceLogsPage() {
       
       try {
         // 並行してデータを取得
-        const [logsData, customersData, servicesData] = await Promise.all([
+        const [logsData, customersResult, servicesData] = await Promise.all([
           getServiceLogs(filters),
           getCustomers(),
           getServices(),
         ]);
         
         setLogs(logsData.logs);
-        setCustomers(customersData);
+        setCustomers(customersResult.customers);
         setServices(servicesData);
       } catch (error) {
         console.error('Failed to fetch data:', error);
