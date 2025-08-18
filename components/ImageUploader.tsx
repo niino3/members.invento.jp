@@ -24,21 +24,17 @@ export default function ImageUploader({
 
   // モバイルデバイスの検出とカメラAPI対応確認
   useEffect(() => {
-    const checkCapabilities = () => {
-      const userAgent = navigator.userAgent || navigator.vendor;
-      const isMobileDevice = /android|iphone|ipad|ipod/i.test(userAgent);
-      const cameraSupported = navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
-      
-      setIsMobile(isMobileDevice);
-      setSupportsCameraAPI(cameraSupported);
-    };
+    const userAgent = navigator.userAgent || navigator.vendor;
+    const isMobileDevice = /android|iphone|ipad|ipod/i.test(userAgent);
+    const cameraSupported = !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
     
-    checkCapabilities();
+    setIsMobile(isMobileDevice);
+    setSupportsCameraAPI(cameraSupported);
   }, []);
 
-  // 画像プレビューURLの生成
-  const generatePreviews = (files: File[]) => {
-    const newPreviews = files.map(file => ({
+  // 画像プレビューの管理
+  useEffect(() => {
+    const newPreviews = images.map(file => ({
       file,
       url: URL.createObjectURL(file)
     }));
@@ -47,7 +43,12 @@ export default function ImageUploader({
     previews.forEach(preview => URL.revokeObjectURL(preview.url));
     
     setPreviews(newPreviews);
-  };
+    
+    // クリーンアップ関数
+    return () => {
+      newPreviews.forEach(preview => URL.revokeObjectURL(preview.url));
+    };
+  }, [images]); // imagesが変更された時のみ実行
 
   const validateFile = (file: File): string | null => {
     // ファイルタイプチェック
@@ -95,7 +96,6 @@ export default function ImageUploader({
     if (validFiles.length > 0) {
       const newImages = [...images, ...validFiles];
       onChange(newImages);
-      generatePreviews(newImages);
     }
   };
 
@@ -122,13 +122,7 @@ export default function ImageUploader({
 
   const removeImage = (index: number) => {
     const newImages = images.filter((_, i) => i !== index);
-    const newPreviews = previews.filter((_, i) => i !== index);
-    
-    // 削除する画像のプレビューURLをクリーンアップ
-    URL.revokeObjectURL(previews[index].url);
-    
     onChange(newImages);
-    setPreviews(newPreviews);
   };
 
   const openCamera = () => {
