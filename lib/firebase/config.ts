@@ -17,6 +17,9 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
 // Initialize Firebase services
 export const auth = getAuth(app);
+// Firebase Authの言語を日本語に設定
+auth.languageCode = 'ja';
+
 export const db = getFirestore(app);
 export const storage = getStorage(app);
 
