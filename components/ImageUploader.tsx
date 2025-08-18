@@ -20,16 +20,20 @@ export default function ImageUploader({
   const [dragOver, setDragOver] = useState(false);
   const [previews, setPreviews] = useState<{ file: File; url: string }[]>([]);
   const [isMobile, setIsMobile] = useState(false);
+  const [supportsCameraAPI, setSupportsCameraAPI] = useState(false);
 
-  // モバイルデバイスの検出
+  // モバイルデバイスの検出とカメラAPI対応確認
   useEffect(() => {
-    const checkMobile = () => {
+    const checkCapabilities = () => {
       const userAgent = navigator.userAgent || navigator.vendor;
       const isMobileDevice = /android|iphone|ipad|ipod/i.test(userAgent);
+      const cameraSupported = navigator.mediaDevices && navigator.mediaDevices.getUserMedia;
+      
       setIsMobile(isMobileDevice);
+      setSupportsCameraAPI(cameraSupported);
     };
     
-    checkMobile();
+    checkCapabilities();
   }, []);
 
   // 画像プレビューURLの生成
@@ -128,18 +132,10 @@ export default function ImageUploader({
   };
 
   const openCamera = () => {
-    // カメラ専用のinput要素を動的に作成
-    const cameraInput = document.createElement('input');
-    cameraInput.type = 'file';
-    cameraInput.accept = 'image/*';
-    cameraInput.capture = 'environment'; // 背面カメラを優先
-    
-    cameraInput.onchange = (e) => {
-      const target = e.target as HTMLInputElement;
-      handleFileSelect(target.files);
-    };
-    
-    cameraInput.click();
+    const cameraInput = document.getElementById('camera-input') as HTMLInputElement;
+    if (cameraInput) {
+      cameraInput.click();
+    }
   };
 
   const openFileSelect = () => {
@@ -170,6 +166,17 @@ export default function ImageUploader({
           disabled={images.length >= maxImages}
         />
         
+        {/* カメラ専用のhidden input */}
+        <input
+          type="file"
+          accept="image/*"
+          capture="environment"
+          onChange={handleFileInputChange}
+          className="hidden"
+          id="camera-input"
+          disabled={images.length >= maxImages}
+        />
+        
         <div className="space-y-1">
           <div className="text-3xl">📷</div>
           <p className="text-sm text-gray-600">
@@ -182,7 +189,7 @@ export default function ImageUploader({
       </div>
 
       {/* カメラボタン */}
-      <div className="flex justify-center space-x-4">
+      <div className="flex justify-center space-x-2 flex-wrap gap-2">
           <button
             type="button"
             onClick={(e) => {
@@ -206,6 +213,13 @@ export default function ImageUploader({
             📁 ファイルから選択
           </button>
         </div>
+      
+      {/* 診断情報（開発用） */}
+      <div className="text-xs text-gray-500 text-center">
+        モバイル: {isMobile ? '✓' : '✗'} | 
+        カメラAPI: {supportsCameraAPI ? '✓' : '✗'} | 
+        HTTPS: {typeof window !== 'undefined' && window.location.protocol === 'https:' ? '✓' : '✗'}
+      </div>
 
       {/* プレビューエリア */}
       {previews.length > 0 && (
