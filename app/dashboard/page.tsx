@@ -8,6 +8,7 @@ import { getCustomer } from '@/lib/firebase/customers';
 import { getServicesByIds } from '@/lib/firebase/services';
 import { Customer } from '@/types/customer';
 import { Service } from '@/types/service';
+import MobileNav from '@/components/MobileNav';
 
 export default function DashboardPage() {
   const { user, loading, signOut } = useAuth();
@@ -95,7 +96,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-gray-50">
       {/* ナビゲーションバー */}
-      <nav className="bg-white shadow-sm border-b border-gray-200">
+      <nav className="bg-white shadow-sm border-b border-gray-200 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             <div className="flex">
@@ -125,7 +126,9 @@ export default function DashboardPage() {
                 </Link>
               </div>
             </div>
-            <div className="flex items-center">
+            
+            {/* デスクトップメニュー */}
+            <div className="hidden sm:flex sm:items-center">
               <span className="text-sm text-gray-700 mr-4">
                 {user.email}
               </span>
@@ -136,6 +139,9 @@ export default function DashboardPage() {
                 ログアウト
               </button>
             </div>
+
+            {/* モバイルメニュー */}
+            <MobileNav userEmail={user.email || ''} onSignOut={handleSignOut} />
           </div>
         </div>
       </nav>
