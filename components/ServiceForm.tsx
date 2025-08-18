@@ -31,6 +31,7 @@ export default function ServiceForm({ service, isEdit = false }: ServiceFormProp
     features: service?.features ? service.features.join('\n') : '',
     categoryId: service?.categoryId || '',
     category: service?.category || '', // 下位互換のため残す
+    logEnabled: service?.logEnabled !== undefined ? service.logEnabled : false, // サービスログ記録フラグ
   });
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -87,6 +88,7 @@ export default function ServiceForm({ service, isEdit = false }: ServiceFormProp
         features: service.features ? service.features.join('\n') : '',
         categoryId: categoryId,
         category: service.category || '',
+        logEnabled: service.logEnabled !== undefined ? service.logEnabled : false,
       });
     }
   }, [service, categories]);
@@ -112,6 +114,7 @@ export default function ServiceForm({ service, isEdit = false }: ServiceFormProp
         billingCycle: formData.billingCycle as 'monthly' | 'yearly' | 'one_time',
         isActive: formData.isActive,
         categoryId: formData.categoryId || '',
+        logEnabled: formData.logEnabled,
       };
 
       // オプショナルフィールドを条件付きで追加
@@ -227,6 +230,19 @@ export default function ServiceForm({ service, isEdit = false }: ServiceFormProp
             />
             <label className="text-sm font-medium text-gray-700">
               アクティブ（顧客に提供中）
+            </label>
+          </div>
+
+          <div className="flex items-center mt-4">
+            <input
+              type="checkbox"
+              name="logEnabled"
+              checked={formData.logEnabled}
+              onChange={handleInputChange}
+              className="h-5 w-5 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded mr-3"
+            />
+            <label className="text-sm font-medium text-gray-700">
+              サービスログ記録を有効にする
             </label>
           </div>
         </div>

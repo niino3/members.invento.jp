@@ -46,6 +46,7 @@ export default function AdminLayout({
     { name: '顧客管理', href: '/admin/customers', icon: '👥' },
     { name: 'サービスカテゴリー', href: '/admin/service-categories', icon: '📂' },
     { name: 'サービス管理', href: '/admin/services', icon: '⚙️' },
+    { name: 'サービスログ', href: '/admin/service-logs', icon: '📝' },
     { name: '請求管理', href: '/admin/billing', icon: '💰' },
     { name: '問い合わせ', href: '/admin/inquiries', icon: '📧' },
   ];
