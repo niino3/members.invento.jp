@@ -21,6 +21,10 @@ export default function ImageUploader({
   const [previews, setPreviews] = useState<{ file: File; url: string }[]>([]);
   const [isMobile, setIsMobile] = useState(false);
   const [supportsCameraAPI, setSupportsCameraAPI] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
 
   // モバイルデバイスの検出とカメラAPI対応確認
   useEffect(() => {
@@ -34,21 +38,38 @@ export default function ImageUploader({
 
   // 画像プレビューの管理
   useEffect(() => {
+    // 既存のプレビューURLをクリーンアップ
+    previews.forEach(preview => {
+      if (preview.url.startsWith('blob:')) {
+        URL.revokeObjectURL(preview.url);
+      }
+    });
+    
     const newPreviews = images.map(file => ({
       file,
       url: URL.createObjectURL(file)
     }));
     
-    // 古いプレビューURLをクリーンアップ
-    previews.forEach(preview => URL.revokeObjectURL(preview.url));
-    
     setPreviews(newPreviews);
     
     // クリーンアップ関数
     return () => {
-      newPreviews.forEach(preview => URL.revokeObjectURL(preview.url));
+      newPreviews.forEach(preview => {
+        if (preview.url.startsWith('blob:')) {
+          URL.revokeObjectURL(preview.url);
+        }
+      });
     };
-  }, [images]); // imagesが変更された時のみ実行
+  }, [images]);
+
+  // クリーンアップ: コンポーネントがアンマウントされる時にカメラを停止
+  useEffect(() => {
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [stream]);
 
   const validateFile = (file: File): string | null => {
     // ファイルタイプチェック
@@ -68,34 +89,40 @@ export default function ImageUploader({
   const handleFileSelect = (selectedFiles: FileList | null) => {
     if (!selectedFiles) return;
 
-    const fileArray = Array.from(selectedFiles);
-    const validFiles: File[] = [];
-    const errors: string[] = [];
+    try {
+      const fileArray = Array.from(selectedFiles);
+      const validFiles: File[] = [];
+      const errors: string[] = [];
 
-    // 最大枚数チェック
-    const remainingSlots = maxImages - images.length;
-    if (fileArray.length > remainingSlots) {
-      errors.push(`最大${maxImages}枚まで追加可能です。残り${remainingSlots}枚です。`);
-      fileArray.splice(remainingSlots);
-    }
-
-    // 各ファイルの検証
-    fileArray.forEach(file => {
-      const error = validateFile(file);
-      if (error) {
-        errors.push(`${file.name}: ${error}`);
-      } else {
-        validFiles.push(file);
+      // 最大枚数チェック
+      const remainingSlots = maxImages - images.length;
+      if (fileArray.length > remainingSlots) {
+        errors.push(`最大${maxImages}枚まで追加可能です。残り${remainingSlots}枚です。`);
+        fileArray.splice(remainingSlots);
       }
-    });
 
-    if (errors.length > 0) {
-      alert(errors.join('\n'));
-    }
+      // 各ファイルの検証
+      fileArray.forEach(file => {
+        const error = validateFile(file);
+        if (error) {
+          errors.push(`${file.name}: ${error}`);
+        } else {
+          validFiles.push(file);
+        }
+      });
 
-    if (validFiles.length > 0) {
-      const newImages = [...images, ...validFiles];
-      onChange(newImages);
+      if (errors.length > 0) {
+        console.error('File validation errors:', errors);
+        alert(errors.join('\n'));
+      }
+
+      if (validFiles.length > 0) {
+        const newImages = [...images, ...validFiles];
+        onChange(newImages);
+      }
+    } catch (error) {
+      console.error('Error handling file selection:', error);
+      alert('ファイル処理中にエラーが発生しました');
     }
   };
 
@@ -125,11 +152,73 @@ export default function ImageUploader({
     onChange(newImages);
   };
 
-  const openCamera = () => {
-    const cameraInput = document.getElementById('camera-input') as HTMLInputElement;
-    if (cameraInput) {
-      cameraInput.click();
+  const startCamera = async () => {
+    if (!supportsCameraAPI) {
+      openFileSelect();
+      return;
     }
+
+    try {
+      const mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: 'environment' // 背面カメラを優先
+        }
+      });
+      
+      setStream(mediaStream);
+      setShowCamera(true);
+      
+      // ビデオ要素にストリームを設定
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = mediaStream;
+          videoRef.current.play();
+        }
+      }, 100);
+    } catch (error) {
+      console.error('Camera access failed:', error);
+      // カメラアクセスが失敗した場合はファイル選択にフォールバック
+      openFileSelect();
+    }
+  };
+
+  const stopCamera = () => {
+    if (stream) {
+      stream.getTracks().forEach(track => track.stop());
+      setStream(null);
+    }
+    setShowCamera(false);
+  };
+
+  const capturePhoto = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    const context = canvas.getContext('2d');
+
+    if (!context) return;
+
+    // キャンバスサイズを動画サイズに合わせる
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    // 動画フレームをキャンバスに描画
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    // キャンバスからBlobを作成
+    canvas.toBlob((blob) => {
+      if (blob) {
+        const file = new File([blob], `capture_${Date.now()}.jpg`, {
+          type: 'image/jpeg'
+        });
+        
+        const newImages = [...images, file];
+        onChange(newImages);
+        
+        stopCamera();
+      }
+    }, 'image/jpeg', 0.8);
   };
 
   const openFileSelect = () => {
@@ -160,17 +249,6 @@ export default function ImageUploader({
           disabled={images.length >= maxImages}
         />
         
-        {/* カメラ専用のhidden input */}
-        <input
-          type="file"
-          accept="image/*"
-          capture="environment"
-          onChange={handleFileInputChange}
-          className="hidden"
-          id="camera-input"
-          disabled={images.length >= maxImages}
-        />
-        
         <div className="space-y-1">
           <div className="text-3xl">📷</div>
           <p className="text-sm text-gray-600">
@@ -188,12 +266,12 @@ export default function ImageUploader({
             type="button"
             onClick={(e) => {
               e.preventDefault();
-              openCamera();
+              startCamera();
             }}
             disabled={images.length >= maxImages}
             className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            📸 カメラで撮影
+            📸 {supportsCameraAPI ? 'カメラで撮影' : '写真を選択'}
           </button>
           <button
             type="button"
@@ -242,6 +320,52 @@ export default function ImageUploader({
               </p>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* カメラモーダル */}
+      {showCamera && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-4 max-w-lg w-full mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-medium">カメラで撮影</h3>
+              <button
+                onClick={stopCamera}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div className="relative">
+              <video
+                ref={videoRef}
+                autoPlay
+                muted
+                playsInline
+                className="w-full h-64 bg-black rounded"
+              />
+              <canvas
+                ref={canvasRef}
+                className="hidden"
+              />
+            </div>
+            
+            <div className="flex justify-center space-x-4 mt-4">
+              <button
+                onClick={stopCamera}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300"
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={capturePhoto}
+                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
+              >
+                📸 撮影
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
