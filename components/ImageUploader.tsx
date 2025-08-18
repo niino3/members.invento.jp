@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 
 interface ImageUploaderProps {
@@ -19,6 +19,18 @@ export default function ImageUploader({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [previews, setPreviews] = useState<{ file: File; url: string }[]>([]);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // モバイルデバイスの検出
+  useEffect(() => {
+    const checkMobile = () => {
+      const userAgent = navigator.userAgent || navigator.vendor;
+      const isMobileDevice = /android|iphone|ipad|ipod/i.test(userAgent);
+      setIsMobile(isMobileDevice);
+    };
+    
+    checkMobile();
+  }, []);
 
   // 画像プレビューURLの生成
   const generatePreviews = (files: File[]) => {
@@ -116,15 +128,22 @@ export default function ImageUploader({
   };
 
   const openCamera = () => {
-    if (fileInputRef.current) {
-      fileInputRef.current.setAttribute('capture', 'environment');
-      fileInputRef.current.click();
-    }
+    // カメラ専用のinput要素を動的に作成
+    const cameraInput = document.createElement('input');
+    cameraInput.type = 'file';
+    cameraInput.accept = 'image/*';
+    cameraInput.capture = 'environment'; // 背面カメラを優先
+    
+    cameraInput.onchange = (e) => {
+      const target = e.target as HTMLInputElement;
+      handleFileSelect(target.files);
+    };
+    
+    cameraInput.click();
   };
 
   const openFileSelect = () => {
     if (fileInputRef.current) {
-      fileInputRef.current.removeAttribute('capture');
       fileInputRef.current.click();
     }
   };
@@ -162,20 +181,31 @@ export default function ImageUploader({
         </div>
       </div>
 
-      {/* カメラボタン（モバイル対応） */}
-      <div className="flex justify-center">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.preventDefault();
-            openCamera();
-          }}
-          disabled={images.length >= maxImages}
-          className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          📸 カメラで撮影
-        </button>
-      </div>
+      {/* カメラボタン */}
+      <div className="flex justify-center space-x-4">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              openCamera();
+            }}
+            disabled={images.length >= maxImages}
+            className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            📸 カメラで撮影
+          </button>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              openFileSelect();
+            }}
+            disabled={images.length >= maxImages}
+            className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            📁 ファイルから選択
+          </button>
+        </div>
 
       {/* プレビューエリア */}
       {previews.length > 0 && (
