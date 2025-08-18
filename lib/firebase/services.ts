@@ -33,6 +33,7 @@ export const convertToService = (doc: DocumentSnapshot): Service | null => {
     features: data.features || [],
     categoryId: data.categoryId || '', // 新しいcategoryIdフィールド
     category: data.category, // 下位互換のため残す
+    logEnabled: data.logEnabled || false, // サービスログ記録フラグ
     createdAt: data.createdAt?.toDate() || new Date(),
     updatedAt: data.updatedAt?.toDate() || new Date(),
     createdBy: data.createdBy,
