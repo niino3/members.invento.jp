@@ -70,10 +70,19 @@ export async function POST(req: NextRequest) {
         console.log('Customer email:', inquiry.customerEmail);
         console.log('Admin email:', adminEmailAddress);
         
-        // Resendの制限により、現在は管理者メールのみ送信
-        // 顧客メールは実装後に有効化
+        // 顧客への確認メール送信（DNS認証完了後に有効化）
+        const customerEmail = await resend.emails.send({
+          from: 'info@coworking.invento.jp',
+          to: inquiry.customerEmail,
+          subject: `【お問い合わせ受付完了】${inquiry.subject}`,
+          html: customerEmailHtml,
+        });
+
+        console.log('Customer email sent:', customerEmail);
+
+        // 管理者への通知メール送信
         const adminEmail = await resend.emails.send({
-          from: 'Invento <onboarding@resend.dev>',
+          from: 'info@coworking.invento.jp',
           to: adminEmailAddress,
           subject: `【新規問い合わせ】${inquiry.companyName} - ${inquiry.subject}`,
           html: `
@@ -91,20 +100,14 @@ export async function POST(req: NextRequest) {
             <pre style="white-space: pre-wrap;">${inquiry.content}</pre>
             
             <hr>
-            <p><strong>注意：</strong>顧客確認メールはドメイン認証後に送信されます。</p>
-            <p>現在は管理者通知のみ送信されています。</p>
+            <p><strong>※</strong> 顧客には自動で確認メールが送信されました。</p>
             
             <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/inquiries">管理画面で確認する</a></p>
           `,
         });
 
-        const customerEmail = { 
-          data: { id: null }, 
-          error: 'Domain verification required for customer emails' 
-        };
-
-        console.log('Resend API Response - Customer Email:', JSON.stringify(customerEmail, null, 2));
-        console.log('Resend API Response - Admin Email:', JSON.stringify(adminEmail, null, 2));
+        console.log('Customer email sent:', customerEmail);
+        console.log('Admin email sent:', adminEmail);
         
         // エラーをチェック
         if (customerEmail.error) {
@@ -114,11 +117,9 @@ export async function POST(req: NextRequest) {
           console.error('Admin email error:', adminEmail.error);
         }
         
-        console.log('Inquiry emails sent successfully:', {
+        console.log('Both emails sent successfully:', {
           customerEmailId: customerEmail.data?.id,
-          adminEmailId: adminEmail.data?.id,
-          customerEmailError: customerEmail.error,
-          adminEmailError: adminEmail.error
+          adminEmailId: adminEmail.data?.id
         });
         
         return NextResponse.json({ success: true, message: 'Emails sent successfully' });
