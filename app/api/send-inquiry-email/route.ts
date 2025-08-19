@@ -71,15 +71,16 @@ export async function POST(req: NextRequest) {
         console.log('Admin email:', adminEmailAddress);
         
         // 顧客への確認メール送信（DNS認証完了後に有効化）
-        // 管理者をTOに含める（カンマ区切り）
+        // 管理者をBCCで通知
         const customerEmail = await resend.emails.send({
           from: 'info@coworking.invento.jp',
-          to: [inquiry.customerEmail, adminEmailAddress],
+          to: inquiry.customerEmail,
+          bcc: adminEmailAddress,
           subject: `【お問い合わせ受付完了】${inquiry.subject}`,
           html: customerEmailHtml,
         });
 
-        console.log('Email sent to both customer and admin:', customerEmail);
+        console.log('Email sent to customer with BCC to admin:', customerEmail);
         
         // エラーをチェック
         if (customerEmail.error) {
@@ -88,7 +89,8 @@ export async function POST(req: NextRequest) {
         
         console.log('Email sent successfully:', {
           emailId: customerEmail.data?.id,
-          sentTo: [inquiry.customerEmail, adminEmailAddress]
+          to: inquiry.customerEmail,
+          bcc: adminEmailAddress
         });
         
         return NextResponse.json({ success: true, message: 'Emails sent successfully' });
