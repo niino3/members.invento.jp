@@ -71,55 +71,25 @@ export async function POST(req: NextRequest) {
         console.log('Admin email:', adminEmailAddress);
         
         // 顧客への確認メール送信（DNS認証完了後に有効化）
+        // 管理者をBCCに追加
         const customerEmail = await resend.emails.send({
           from: 'info@coworking.invento.jp',
           to: inquiry.customerEmail,
+          bcc: adminEmailAddress,
           subject: `【お問い合わせ受付完了】${inquiry.subject}`,
           html: customerEmailHtml,
         });
 
-        console.log('Customer email sent:', customerEmail);
-
-        // 管理者への通知メール送信
-        const adminEmail = await resend.emails.send({
-          from: 'info@coworking.invento.jp',
-          to: adminEmailAddress,
-          subject: `【新規問い合わせ】${inquiry.companyName} - ${inquiry.subject}`,
-          html: `
-            <h2>新規問い合わせがありました</h2>
-            
-            <h3>顧客情報</h3>
-            <p><strong>会社名：</strong>${inquiry.companyName}</p>
-            <p><strong>お名前：</strong>${inquiry.customerName}</p>
-            <p><strong>メール：</strong>${inquiry.customerEmail}</p>
-            
-            <h3>問い合わせ内容</h3>
-            <p><strong>件名：</strong>${inquiry.subject}</p>
-            <p><strong>カテゴリー：</strong>${inquiry.categoryLabel}</p>
-            <p><strong>内容：</strong></p>
-            <pre style="white-space: pre-wrap;">${inquiry.content}</pre>
-            
-            <hr>
-            <p><strong>※</strong> 顧客には自動で確認メールが送信されました。</p>
-            
-            <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/inquiries">管理画面で確認する</a></p>
-          `,
-        });
-
-        console.log('Customer email sent:', customerEmail);
-        console.log('Admin email sent:', adminEmail);
+        console.log('Customer email sent (with BCC to admin):', customerEmail);
         
         // エラーをチェック
         if (customerEmail.error) {
           console.error('Customer email error:', customerEmail.error);
         }
-        if (adminEmail.error) {
-          console.error('Admin email error:', adminEmail.error);
-        }
         
-        console.log('Both emails sent successfully:', {
+        console.log('Email sent successfully:', {
           customerEmailId: customerEmail.data?.id,
-          adminEmailId: adminEmail.data?.id
+          bccAdmin: adminEmailAddress
         });
         
         return NextResponse.json({ success: true, message: 'Emails sent successfully' });
