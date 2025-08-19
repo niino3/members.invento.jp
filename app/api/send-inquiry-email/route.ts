@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
         console.log('Sending emails with Resend...');
         console.log('Sending to:', {
           customer: inquiry.customerEmail,
-          admin: adminEmailAddress
+          bccAdmin: adminEmailAddress
         });
 
         // 顧客への確認メール
@@ -71,16 +71,15 @@ export async function POST(req: NextRequest) {
         console.log('Admin email:', adminEmailAddress);
         
         // 顧客への確認メール送信（DNS認証完了後に有効化）
-        // 管理者をBCCに追加
+        // 管理者をTOに含める（カンマ区切り）
         const customerEmail = await resend.emails.send({
           from: 'info@coworking.invento.jp',
-          to: inquiry.customerEmail,
-          bcc: adminEmailAddress,
+          to: [inquiry.customerEmail, adminEmailAddress],
           subject: `【お問い合わせ受付完了】${inquiry.subject}`,
           html: customerEmailHtml,
         });
 
-        console.log('Customer email sent (with BCC to admin):', customerEmail);
+        console.log('Email sent to both customer and admin:', customerEmail);
         
         // エラーをチェック
         if (customerEmail.error) {
@@ -88,8 +87,8 @@ export async function POST(req: NextRequest) {
         }
         
         console.log('Email sent successfully:', {
-          customerEmailId: customerEmail.data?.id,
-          bccAdmin: adminEmailAddress
+          emailId: customerEmail.data?.id,
+          sentTo: [inquiry.customerEmail, adminEmailAddress]
         });
         
         return NextResponse.json({ success: true, message: 'Emails sent successfully' });
