@@ -330,6 +330,7 @@ export default function ImageUploader({
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium">カメラで撮影</h3>
               <button
+                type="button"
                 onClick={stopCamera}
                 className="text-gray-400 hover:text-gray-600"
               >
@@ -353,12 +354,14 @@ export default function ImageUploader({
             
             <div className="flex justify-center space-x-4 mt-4">
               <button
+                type="button"
                 onClick={stopCamera}
                 className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300"
               >
                 キャンセル
               </button>
               <button
+                type="button"
                 onClick={capturePhoto}
                 className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
               >
