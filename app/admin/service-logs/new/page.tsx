@@ -70,9 +70,9 @@ export default function NewServiceLogPage() {
         );
         setAvailableServices(customerServices);
         
-        // 選択済みのサービスが利用可能でない場合はクリア
-        if (!customerServices.find(s => s.id === formData.serviceId)) {
-          setFormData(prev => ({ ...prev, serviceId: '' }));
+        // 自動的に最初のサービスを選択
+        if (customerServices.length > 0) {
+          setFormData(prev => ({ ...prev, serviceId: customerServices[0].id }));
         }
       }
     } else {
@@ -191,33 +191,19 @@ export default function NewServiceLogPage() {
               </select>
             </div>
 
-            {/* サービス選択 */}
+            {/* サービス表示 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                サービス <span className="text-red-500">*</span>
+                サービス
               </label>
-              <select
+              <div className="block w-full rounded-md border-gray-300 bg-gray-50 px-3 py-2 text-gray-900">
+                ビジネス住所利用
+              </div>
+              <input
+                type="hidden"
                 name="serviceId"
-                value={formData.serviceId}
-                onChange={handleInputChange}
-                required
-                disabled={!formData.customerId}
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm disabled:bg-gray-100"
-              >
-                <option value="">
-                  {formData.customerId ? 'サービスを選択してください' : '先に顧客を選択してください'}
-                </option>
-                {availableServices.map((service) => (
-                  <option key={service.id} value={service.id}>
-                    {service.name}
-                  </option>
-                ))}
-              </select>
-              {formData.customerId && availableServices.length === 0 && (
-                <p className="mt-1 text-sm text-gray-500">
-                  この顧客にはログ記録が有効なサービスがありません。
-                </p>
-              )}
+                value={availableServices[0]?.id || ''}
+              />
             </div>
 
             {/* 作業日時 */}
@@ -284,8 +270,8 @@ export default function NewServiceLogPage() {
               value={formData.comment}
               onChange={handleInputChange}
               required
-              rows={6}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              rows={10}
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900"
               placeholder="作業内容を詳しく記入してください..."
             />
           </div>

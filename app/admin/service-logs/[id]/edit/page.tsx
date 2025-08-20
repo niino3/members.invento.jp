@@ -285,8 +285,8 @@ export default function EditServiceLogPage() {
               value={formData.comment}
               onChange={handleInputChange}
               required
-              rows={6}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              rows={10}
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900"
               placeholder="作業内容を詳しく記入してください..."
             />
           </div>
