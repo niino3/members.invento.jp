@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getAllInquiries, updateInquiryStatus } from '@/lib/firebase/inquiries';
 import { Inquiry, InquiryStatus, INQUIRY_CATEGORY_LABELS, INQUIRY_STATUS_LABELS } from '@/types/inquiry';
+import { formatJSTDate } from '@/lib/utils/date';
 
 export default function InquiriesPage() {
   const [inquiries, setInquiries] = useState<Inquiry[]>([]);
@@ -38,15 +39,6 @@ export default function InquiriesPage() {
     }
   };
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('ja-JP', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
 
   return (
     <div className="space-y-6">
@@ -113,7 +105,7 @@ export default function InquiriesPage() {
                       </div>
                       <p className="text-sm text-gray-600 whitespace-pre-wrap line-clamp-3">{inquiry.content}</p>
                       <p className="mt-2 text-xs text-gray-500">
-                        受信日時: {formatDate(inquiry.createdAt)}
+                        受信日時: {formatJSTDate(inquiry.createdAt)}
                       </p>
                     </div>
                     <div className="ml-4">

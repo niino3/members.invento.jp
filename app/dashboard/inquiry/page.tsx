@@ -4,11 +4,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getCustomer } from '@/lib/firebase/customers';
+import { getCustomerByUserId } from '@/lib/firebase/customers';
 import { createInquiry, getInquiriesByCustomer } from '@/lib/firebase/inquiries';
 import { Customer } from '@/types/customer';
 import { Inquiry, InquiryCategory, INQUIRY_CATEGORY_LABELS, INQUIRY_STATUS_LABELS } from '@/types/inquiry';
 import MobileNav from '@/components/MobileNav';
+import { formatJSTDate } from '@/lib/utils/date';
 
 export default function InquiryPage() {
   const { user, loading, signOut } = useAuth();
@@ -42,7 +43,7 @@ export default function InquiryPage() {
 
       try {
         const [customerData, inquiriesData] = await Promise.all([
-          getCustomer(user.customerId),
+          getCustomerByUserId(user.uid),
           getInquiriesByCustomer(user.customerId)
         ]);
         
@@ -157,15 +158,6 @@ export default function InquiryPage() {
     }
   };
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('ja-JP', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
-  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -191,6 +183,12 @@ export default function InquiryPage() {
                   className="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm"
                 >
                   サービス詳細
+                </Link>
+                <Link
+                  href="/dashboard/service-logs"
+                  className="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm"
+                >
+                  サービスログ
                 </Link>
                 <Link
                   href="/dashboard/inquiry"
@@ -345,7 +343,7 @@ export default function InquiryPage() {
                         </div>
                         <p className="text-sm text-gray-600 whitespace-pre-wrap">{inquiry.content}</p>
                         <p className="mt-2 text-xs text-gray-500">
-                          送信日時: {formatDate(inquiry.createdAt)}
+                          送信日時: {formatJSTDate(inquiry.createdAt)}
                         </p>
                       </div>
                     </div>

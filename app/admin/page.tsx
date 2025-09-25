@@ -3,6 +3,9 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { getInquiryStats } from '@/lib/firebase/inquiries';
+import { getRecentActivities, formatActivityMessage, getActivityIcon } from '@/lib/firebase/activities';
+import { Activity } from '@/types/activity';
+import { formatJSTDate } from '@/lib/utils/date';
 
 export default function AdminDashboard() {
   const [stats, setStats] = useState({
@@ -16,12 +19,18 @@ export default function AdminDashboard() {
     pending: 0,
     resolved: 0,
   });
+  const [recentActivities, setRecentActivities] = useState<Activity[]>([]);
 
-  // TODO: 実際の統計データを取得
+  // 統計データと最近の活動を取得
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchData = async () => {
       try {
-        const inquiryData = await getInquiryStats();
+        // 並行してデータを取得
+        const [inquiryData, activities] = await Promise.all([
+          getInquiryStats(),
+          getRecentActivities(5)
+        ]);
+        
         setInquiryStats(inquiryData);
         setStats({
           totalCustomers: 15,
@@ -29,11 +38,12 @@ export default function AdminDashboard() {
           pendingInquiries: inquiryData.pending,
           monthlyRevenue: 250000,
         });
+        setRecentActivities(activities);
       } catch (error) {
-        console.error('Failed to fetch stats:', error);
+        console.error('Failed to fetch data:', error);
       }
     };
-    fetchStats();
+    fetchData();
   }, []);
 
   const quickActions = [
@@ -196,23 +206,36 @@ export default function AdminDashboard() {
           <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">
             最近の活動
           </h3>
-          <div className="space-y-3">
-            <div className="flex items-center text-sm text-gray-600">
-              <span className="mr-2">👤</span>
-              <span>新規顧客「株式会社テスト」が登録されました</span>
-              <span className="ml-auto text-xs text-gray-400">2時間前</span>
+          {recentActivities.length === 0 ? (
+            <p className="text-sm text-gray-500">最近の活動はありません</p>
+          ) : (
+            <div className="space-y-3">
+              {recentActivities.map((activity) => {
+                const now = new Date();
+                const diff = now.getTime() - activity.createdAt.getTime();
+                const hours = Math.floor(diff / (1000 * 60 * 60));
+                const days = Math.floor(hours / 24);
+                
+                let timeAgo = '';
+                if (days > 0) {
+                  timeAgo = `${days}日前`;
+                } else if (hours > 0) {
+                  timeAgo = `${hours}時間前`;
+                } else {
+                  const minutes = Math.floor(diff / (1000 * 60));
+                  timeAgo = minutes > 0 ? `${minutes}分前` : '今';
+                }
+                
+                return (
+                  <div key={activity.id} className="flex items-center text-sm text-gray-600">
+                    <span className="mr-2">{getActivityIcon(activity.type)}</span>
+                    <span className="flex-1">{formatActivityMessage(activity)}</span>
+                    <span className="ml-auto text-xs text-gray-400">{timeAgo}</span>
+                  </div>
+                );
+              })}
             </div>
-            <div className="flex items-center text-sm text-gray-600">
-              <span className="mr-2">📧</span>
-              <span>問い合わせが1件追加されました</span>
-              <span className="ml-auto text-xs text-gray-400">4時間前</span>
-            </div>
-            <div className="flex items-center text-sm text-gray-600">
-              <span className="mr-2">⚙️</span>
-              <span>サービス「プレミアムプラン」が更新されました</span>
-              <span className="ml-auto text-xs text-gray-400">1日前</span>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </div>

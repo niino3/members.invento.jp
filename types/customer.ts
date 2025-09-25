@@ -7,6 +7,7 @@ export interface Customer {
   id: string;
   companyType: CompanyType;
   companyName: string; // 必須
+  companyNameKana?: string; // 会社名カナ
   contactName: string; // 必須
   postalCode?: string;
   address1?: string;
@@ -35,6 +36,7 @@ export interface Customer {
 export interface CreateCustomerInput {
   companyType: CompanyType;
   companyName: string;
+  companyNameKana?: string;
   contactName: string;
   postalCode?: string;
   address1?: string;

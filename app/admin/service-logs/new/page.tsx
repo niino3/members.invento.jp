@@ -11,6 +11,7 @@ import { Customer } from '@/types/customer';
 import { Service } from '@/types/service';
 import { CreateServiceLogInput } from '@/types/serviceLog';
 import ImageUploader from '@/components/ImageUploader';
+import { getCurrentJSTDateTime } from '@/lib/utils/date';
 
 export default function NewServiceLogPage() {
   const router = useRouter();
@@ -21,11 +22,13 @@ export default function NewServiceLogPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [services, setServices] = useState<Service[]>([]);
   const [availableServices, setAvailableServices] = useState<Service[]>([]);
+  const [selectedKanaGroup, setSelectedKanaGroup] = useState<string>('');
+  const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
   
   const [formData, setFormData] = useState({
     customerId: '',
     serviceId: '',
-    workDate: new Date().toISOString().slice(0, 16), // YYYY-MM-DDTHH:mm format
+    workDate: getCurrentJSTDateTime(), // 日本時間での現在時刻
     comment: '',
     status: 'published' as 'draft' | 'published',
   });
@@ -59,6 +62,44 @@ export default function NewServiceLogPage() {
 
     fetchData();
   }, [user]);
+
+  // カナグループが選択されたら顧客をフィルタリング
+  useEffect(() => {
+    if (selectedKanaGroup) {
+      const getKanaGroup = (kana: string | undefined): string => {
+        if (!kana || kana.length === 0) return 'その他';
+        const firstChar = kana.charAt(0);
+        
+        // カナ行の判定
+        if (firstChar >= 'ア' && firstChar <= 'オ') return 'ア行';
+        if (firstChar >= 'カ' && firstChar <= 'コ') return 'カ行';
+        if (firstChar >= 'サ' && firstChar <= 'ソ') return 'サ行';
+        if (firstChar >= 'タ' && firstChar <= 'ト') return 'タ行';
+        if (firstChar >= 'ナ' && firstChar <= 'ノ') return 'ナ行';
+        if (firstChar >= 'ハ' && firstChar <= 'ホ') return 'ハ行';
+        if (firstChar >= 'マ' && firstChar <= 'モ') return 'マ行';
+        if (firstChar >= 'ヤ' && firstChar <= 'ヨ') return 'ヤ行';
+        if (firstChar >= 'ラ' && firstChar <= 'ロ') return 'ラ行';
+        if (firstChar >= 'ワ' && firstChar <= 'ン') return 'ワ行';
+        if (firstChar >= 'ａ' && firstChar <= 'ｚ') return '英数字';
+        if (firstChar >= 'Ａ' && firstChar <= 'Ｚ') return '英数字';
+        if (firstChar >= 'A' && firstChar <= 'Z') return '英数字';
+        if (firstChar >= 'a' && firstChar <= 'z') return '英数字';
+        if (firstChar >= '0' && firstChar <= '9') return '英数字';
+        if (firstChar >= '０' && firstChar <= '９') return '英数字';
+        return 'その他';
+      };
+      
+      const filtered = customers.filter(customer => {
+        const group = getKanaGroup(customer.companyNameKana);
+        return group === selectedKanaGroup;
+      });
+      
+      setFilteredCustomers(filtered);
+    } else {
+      setFilteredCustomers([]);
+    }
+  }, [selectedKanaGroup, customers]);
 
   // 顧客が選択されたら、その顧客が契約しているサービスのみ表示
   useEffect(() => {
@@ -175,20 +216,59 @@ export default function NewServiceLogPage() {
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 顧客 <span className="text-red-500">*</span>
               </label>
-              <select
-                name="customerId"
-                value={formData.customerId}
-                onChange={handleInputChange}
-                required
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
-              >
-                <option value="">顧客を選択してください</option>
-                {customers.map((customer) => (
-                  <option key={customer.id} value={customer.id}>
-                    {customer.companyName}
+              
+              {/* カナグループ選択 */}
+              <div className="flex gap-2 mb-2">
+                <select
+                  value={selectedKanaGroup}
+                  onChange={(e) => {
+                    setSelectedKanaGroup(e.target.value);
+                    setFormData(prev => ({ ...prev, customerId: '' })); // 顧客選択をリセット
+                  }}
+                  className="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900 h-10"
+                >
+                  <option value="">カナを選択</option>
+                  <option value="ア行">ア行</option>
+                  <option value="カ行">カ行</option>
+                  <option value="サ行">サ行</option>
+                  <option value="タ行">タ行</option>
+                  <option value="ナ行">ナ行</option>
+                  <option value="ハ行">ハ行</option>
+                  <option value="マ行">マ行</option>
+                  <option value="ヤ行">ヤ行</option>
+                  <option value="ラ行">ラ行</option>
+                  <option value="ワ行">ワ行</option>
+                  <option value="英数字">英数字</option>
+                  <option value="その他">その他</option>
+                </select>
+                
+                {/* 顧客選択 */}
+                <select
+                  name="customerId"
+                  value={formData.customerId}
+                  onChange={handleInputChange}
+                  required
+                  disabled={!selectedKanaGroup}
+                  className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900 h-10 disabled:bg-gray-100"
+                >
+                  <option value="">
+                    {selectedKanaGroup ? '顧客を選択' : 'まずカナを選択してください'}
                   </option>
-                ))}
-              </select>
+                  {filteredCustomers
+                    .sort((a, b) => {
+                      // カナがある場合はカナでソート、ない場合は会社名でソート
+                      const aSort = a.companyNameKana || a.companyName;
+                      const bSort = b.companyNameKana || b.companyName;
+                      return aSort.localeCompare(bSort, 'ja');
+                    })
+                    .map((customer) => (
+                      <option key={customer.id} value={customer.id}>
+                        {customer.companyName}
+                        {customer.companyNameKana && ` (${customer.companyNameKana})`}
+                      </option>
+                    ))}
+                </select>
+              </div>
             </div>
 
             {/* サービス表示 */}
@@ -217,7 +297,7 @@ export default function NewServiceLogPage() {
                 value={formData.workDate}
                 onChange={handleInputChange}
                 required
-                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900 px-3 py-2"
               />
             </div>
 
@@ -271,7 +351,8 @@ export default function NewServiceLogPage() {
               onChange={handleInputChange}
               required
               rows={10}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900"
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900 px-3 py-2"
+              style={{ minHeight: '200px' }}
               placeholder="作業内容を詳しく記入してください..."
             />
           </div>

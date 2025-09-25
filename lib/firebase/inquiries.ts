@@ -17,6 +17,7 @@ import {
 } from 'firebase/firestore';
 import { db } from './config';
 import { Inquiry, InquiryStatus } from '@/types/inquiry';
+import { logActivity } from './activities';
 
 const COLLECTION_NAME = 'inquiries';
 
@@ -50,6 +51,15 @@ export const createInquiry = async (
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
+    
+    // 活動を記録
+    await logActivity(
+      'inquiry_created',
+      docRef.id,
+      inquiryData.subject,
+      'customer',
+      inquiryData.customerName
+    );
     
     console.log('Inquiry created with ID:', docRef.id);
     return docRef.id;

@@ -10,6 +10,7 @@ import { getServices } from '@/lib/firebase/services';
 import { ServiceLog, ServiceLogSearchParams } from '@/types/serviceLog';
 import { Customer } from '@/types/customer';
 import { Service } from '@/types/service';
+import { formatJSTDate } from '@/lib/utils/date';
 
 export default function ServiceLogsPage() {
   const router = useRouter();
@@ -19,6 +20,8 @@ export default function ServiceLogsPage() {
   const [services, setServices] = useState<Service[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [selectedImage, setSelectedImage] = useState<{ url: string; filename: string } | null>(null);
+  const [selectedLogImages, setSelectedLogImages] = useState<{ images: { id: string; url: string; filename: string }[]; logInfo: string } | null>(null);
   
   // フィルター状態
   const [filters, setFilters] = useState<ServiceLogSearchParams>({
@@ -118,15 +121,6 @@ export default function ServiceLogsPage() {
     return service ? service.name : 'Unknown';
   };
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('ja-JP', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
 
   if (loading || dataLoading) {
     return (
@@ -165,7 +159,7 @@ export default function ServiceLogsPage() {
             <select
               value={filters.customerId || ''}
               onChange={(e) => handleFilterChange('customerId', e.target.value)}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900 h-10"
             >
               <option value="">すべての顧客</option>
               {customers.map((customer) => (
@@ -182,7 +176,7 @@ export default function ServiceLogsPage() {
             <select
               value={filters.serviceId || ''}
               onChange={(e) => handleFilterChange('serviceId', e.target.value)}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900 h-10"
             >
               <option value="">すべてのサービス</option>
               {services
@@ -201,7 +195,7 @@ export default function ServiceLogsPage() {
             <select
               value={filters.status || ''}
               onChange={(e) => handleFilterChange('status', e.target.value)}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900 h-10"
             >
               <option value="">すべて</option>
               <option value="published">公開</option>
@@ -218,7 +212,7 @@ export default function ServiceLogsPage() {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                className="block w-full rounded-l-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                className="block w-full rounded-l-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900 h-10"
                 placeholder="コメント内を検索"
               />
               <button
@@ -239,7 +233,7 @@ export default function ServiceLogsPage() {
               type="date"
               value={dateRange.start}
               onChange={(e) => setDateRange(prev => ({ ...prev, start: e.target.value }))}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900 h-10"
             />
           </div>
           <div>
@@ -248,7 +242,7 @@ export default function ServiceLogsPage() {
               type="date"
               value={dateRange.end}
               onChange={(e) => setDateRange(prev => ({ ...prev, end: e.target.value }))}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900 h-10"
             />
           </div>
         </div>
@@ -300,7 +294,7 @@ export default function ServiceLogsPage() {
                 {logs.map((log) => (
                   <tr key={log.id}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatDate(log.workDate)}
+                      {formatJSTDate(log.workDate)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {getCustomerName(log.customerId)}
@@ -312,10 +306,34 @@ export default function ServiceLogsPage() {
                       {log.workerName}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {log.images.length > 0 && (
-                        <span className="inline-flex items-center px-2 py-1 text-xs font-medium rounded-full bg-gray-100 text-gray-800">
-                          📷 {log.images.length}枚
-                        </span>
+                      {log.images.length > 0 ? (
+                        <button
+                          onClick={() => setSelectedLogImages({ 
+                            images: log.images, 
+                            logInfo: `${getCustomerName(log.customerId)} - ${formatJSTDate(log.workDate)}` 
+                          })}
+                          className="flex space-x-1 hover:bg-gray-50 p-1 rounded transition-colors"
+                        >
+                          {log.images.slice(0, 3).map((image, index) => (
+                            <div
+                              key={image.id}
+                              className="relative w-12 h-12 rounded overflow-hidden border border-gray-200"
+                            >
+                              <img
+                                src={image.url}
+                                alt={image.filename}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          ))}
+                          {log.images.length > 3 && (
+                            <div className="w-12 h-12 rounded bg-gray-100 border border-gray-200 flex items-center justify-center">
+                              <span className="text-xs text-gray-600">+{log.images.length - 3}</span>
+                            </div>
+                          )}
+                        </button>
+                      ) : (
+                        <span className="text-gray-400">-</span>
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -372,6 +390,70 @@ export default function ServiceLogsPage() {
               >
                 削除する
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ログ画像一覧モーダル */}
+      {selectedLogImages && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50 p-4" onClick={() => setSelectedLogImages(null)}>
+          <div className="max-w-6xl max-h-full bg-white rounded-lg overflow-hidden" onClick={(e) => e.stopPropagation()}>
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-medium text-gray-900">{selectedLogImages.logInfo}</h3>
+                <button
+                  onClick={() => setSelectedLogImages(null)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-h-96 overflow-y-auto">
+                {selectedLogImages.images.map((image, index) => (
+                  <div
+                    key={image.id}
+                    className="relative w-full h-32 bg-gray-100 rounded-lg overflow-hidden hover:ring-2 hover:ring-indigo-500 transition-all cursor-pointer"
+                    onClick={() => setSelectedImage({ url: image.url, filename: image.filename })}
+                  >
+                    <img
+                      src={image.url}
+                      alt={image.filename}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        console.error('Image failed to load:', image.url);
+                      }}
+                      onLoad={() => console.log('Image loaded successfully:', image.url)}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 画像拡大モーダル */}
+      {selectedImage && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-[60]" onClick={() => setSelectedImage(null)}>
+          <div className="max-w-4xl max-h-full p-4" onClick={(e) => e.stopPropagation()}>
+            <div className="relative">
+              <button
+                onClick={() => setSelectedImage(null)}
+                className="absolute -top-2 -right-2 bg-white rounded-full w-8 h-8 flex items-center justify-center hover:bg-gray-100 shadow-lg z-10"
+              >
+                ×
+              </button>
+              <img
+                src={selectedImage.url}
+                alt={selectedImage.filename}
+                className="max-w-full max-h-[90vh] object-contain rounded-lg shadow-lg"
+              />
+              <div className="mt-4 text-center">
+                <p className="text-white text-sm">{selectedImage.filename}</p>
+              </div>
             </div>
           </div>
         </div>

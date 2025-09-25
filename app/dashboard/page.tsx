@@ -4,11 +4,12 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { getCustomer } from '@/lib/firebase/customers';
+import { getCustomerByUserId } from '@/lib/firebase/customers';
 import { getServicesByIds } from '@/lib/firebase/services';
 import { Customer } from '@/types/customer';
 import { Service } from '@/types/service';
 import MobileNav from '@/components/MobileNav';
+import { formatJSTDate } from '@/lib/utils/date';
 
 export default function DashboardPage() {
   const { user, loading, signOut } = useAuth();
@@ -41,7 +42,7 @@ export default function DashboardPage() {
       }
 
       try {
-        const customerData = await getCustomer(user.customerId);
+        const customerData = await getCustomerByUserId(user.uid);
         if (customerData) {
           setCustomer(customerData);
           
@@ -83,10 +84,6 @@ export default function DashboardPage() {
     }
   };
 
-  const formatDate = (date: Date | undefined) => {
-    if (!date) return '-';
-    return date.toLocaleDateString('ja-JP');
-  };
 
   const getPaymentMethodLabel = (method: string | undefined) => {
     if (!method) return '-';
@@ -117,6 +114,12 @@ export default function DashboardPage() {
                   className="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm"
                 >
                   サービス詳細
+                </Link>
+                <Link
+                  href="/dashboard/service-logs"
+                  className="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm"
+                >
+                  サービスログ
                 </Link>
                 <Link
                   href="/dashboard/inquiry"
@@ -190,7 +193,7 @@ export default function DashboardPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-500">サービス開始日</label>
-                    <p className="mt-1 text-sm text-gray-900">{formatDate(customer.contractStartDate)}</p>
+                    <p className="mt-1 text-sm text-gray-900">{customer.contractStartDate ? formatJSTDate(customer.contractStartDate, { year: 'numeric', month: '2-digit', day: '2-digit' }) : '-'}</p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-500">支払い方法</label>

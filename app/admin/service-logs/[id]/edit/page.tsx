@@ -11,6 +11,7 @@ import { Customer } from '@/types/customer';
 import { Service } from '@/types/service';
 import { ServiceLog, UpdateServiceLogInput } from '@/types/serviceLog';
 import ImageUploader from '@/components/ImageUploader';
+import { dateToJSTString, formatJSTDate } from '@/lib/utils/date';
 
 export default function EditServiceLogPage() {
   const router = useRouter();
@@ -54,11 +55,9 @@ export default function EditServiceLogPage() {
         
         setServiceLog(log);
         
-        // フォームデータを設定
-        const workDateLocal = new Date(log.workDate);
-        workDateLocal.setMinutes(workDateLocal.getMinutes() - workDateLocal.getTimezoneOffset());
+        // フォームデータを設定（日本時間で表示）
         setFormData({
-          workDate: workDateLocal.toISOString().slice(0, 16),
+          workDate: dateToJSTString(log.workDate),
           comment: log.comment,
           status: log.status,
         });
@@ -202,13 +201,7 @@ export default function EditServiceLogPage() {
           <div>
             <span className="text-sm font-medium text-gray-500">作成日時:</span>
             <p className="text-sm text-gray-900">
-              {serviceLog.createdAt.toLocaleDateString('ja-JP', {
-                year: 'numeric',
-                month: '2-digit',
-                day: '2-digit',
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
+              {formatJSTDate(serviceLog.createdAt)}
             </p>
           </div>
         </div>
@@ -286,7 +279,8 @@ export default function EditServiceLogPage() {
               onChange={handleInputChange}
               required
               rows={10}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900"
+              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              style={{ color: '#000000 !important', minHeight: '240px', fontSize: '14px' }}
               placeholder="作業内容を詳しく記入してください..."
             />
           </div>

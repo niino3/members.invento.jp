@@ -24,6 +24,7 @@ export default function MobileNav({ userEmail, onSignOut }: MobileNavProps) {
   const navItems = [
     { href: '/dashboard', label: 'ダッシュボード' },
     { href: '/dashboard/services', label: 'サービス詳細' },
+    { href: '/dashboard/service-logs', label: 'サービスログ' },
     { href: '/dashboard/inquiry', label: '問い合わせ' },
   ];
 

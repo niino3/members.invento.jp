@@ -15,6 +15,8 @@ import {
 } from 'firebase/firestore';
 import { db } from './config';
 import { Customer, CreateCustomerInput, UpdateCustomerInput } from '@/types/customer';
+import { logActivity } from './activities';
+import { auth } from './config';
 
 const COLLECTION_NAME = 'customers';
 
@@ -27,6 +29,7 @@ export const convertToCustomer = (doc: DocumentSnapshot): Customer | null => {
     id: doc.id,
     companyType: data.companyType,
     companyName: data.companyName,
+    companyNameKana: data.companyNameKana,
     contactName: data.contactName,
     postalCode: data.postalCode,
     address1: data.address1,
@@ -56,7 +59,8 @@ export const convertToCustomer = (doc: DocumentSnapshot): Customer | null => {
 // 顧客を作成
 export const createCustomer = async (
   customerData: CreateCustomerInput,
-  userId: string
+  userId: string,
+  userName: string = '管理者'
 ): Promise<string> => {
   const docRef = await addDoc(collection(db, COLLECTION_NAME), {
     ...customerData,
@@ -68,6 +72,16 @@ export const createCustomer = async (
     createdBy: userId,
     updatedBy: userId,
   });
+  
+  // 活動を記録
+  await logActivity(
+    'customer_created',
+    docRef.id,
+    customerData.companyName,
+    userId,
+    userName
+  );
+  
   return docRef.id;
 };
 
@@ -136,7 +150,8 @@ export const searchCustomers = async (searchTerm: string): Promise<Customer[]> =
 export const updateCustomer = async (
   customerId: string,
   customerData: Omit<Customer, 'id' | 'createdAt' | 'updatedAt' | 'createdBy'>,
-  userId?: string
+  userId: string = 'system',
+  userName: string = '管理者'
 ): Promise<void> => {
   const docRef = doc(db, COLLECTION_NAME, customerId);
   
@@ -148,6 +163,15 @@ export const updateCustomer = async (
     updatedAt: serverTimestamp(),
     updatedBy: userId || 'system',
   });
+  
+  // 活動を記録
+  await logActivity(
+    'customer_updated',
+    customerId,
+    customerData.companyName,
+    userId,
+    userName
+  );
 };
 
 // 顧客を解約（契約状態をcancelledに変更）
@@ -241,4 +265,32 @@ export const getCustomersByServiceId = async (serviceId: string): Promise<Custom
   });
 
   return customers;
+};
+
+// ユーザーIDから顧客情報を取得
+export const getCustomerByUserId = async (userId: string): Promise<Customer | null> => {
+  try {
+    // usersコレクションからcustomerIdを取得
+    const userDocRef = doc(db, 'users', userId);
+    const userDocSnap = await getDoc(userDocRef);
+    
+    if (!userDocSnap.exists()) {
+      console.log('User document does not exist:', userId);
+      return null;
+    }
+    
+    const userData = userDocSnap.data();
+    const customerId = userData?.customerId;
+    
+    if (!customerId) {
+      console.log('User does not have customerId:', userId);
+      return null;
+    }
+    
+    // customersコレクションから顧客情報を取得
+    return await getCustomer(customerId);
+  } catch (error) {
+    console.error('Error fetching customer by user ID:', error);
+    throw new Error('顧客情報の取得に失敗しました');
+  }
 };

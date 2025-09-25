@@ -7,6 +7,7 @@ import { createCustomer, updateCustomer } from '@/lib/firebase/customers';
 import { getServices } from '@/lib/firebase/services';
 import { Customer, CreateCustomerInput, UpdateCustomerInput, CompanyType, PaymentMethod, InvoiceDeliveryMethod, ContractStatus } from '@/types/customer';
 import { Service } from '@/types/service';
+import { jstStringToDate } from '@/lib/utils/date';
 
 interface CustomerFormProps {
   customer?: Customer;
@@ -25,6 +26,7 @@ export default function CustomerForm({ customer, isEdit = false }: CustomerFormP
   const [formData, setFormData] = useState({
     companyType: (customer?.companyType || 'corporate') as CompanyType,
     companyName: customer?.companyName || '',
+    companyNameKana: customer?.companyNameKana || '',
     contactName: customer?.contactName || '',
     postalCode: customer?.postalCode || '',
     address1: customer?.address1 || '',
@@ -136,14 +138,15 @@ export default function CustomerForm({ customer, isEdit = false }: CustomerFormP
     setError('');
 
     try {
-      // 日付の変換
-      const contractStartDate = formData.contractStartDate ? new Date(formData.contractStartDate) : undefined;
-      const contractEndDate = formData.contractEndDate ? new Date(formData.contractEndDate) : undefined;
+      // 日付の変換（JST文字列をUTC Dateオブジェクトに変換）
+      const contractStartDate = formData.contractStartDate ? jstStringToDate(formData.contractStartDate) : undefined;
+      const contractEndDate = formData.contractEndDate ? jstStringToDate(formData.contractEndDate) : undefined;
 
       // undefinedを除去してFirestore用のデータを準備
       const cleanData = {
         companyType: formData.companyType,
         companyName: formData.companyName,
+        companyNameKana: formData.companyNameKana,
         contactName: formData.contactName,
         invoiceRequired: formData.invoiceRequired,
         serviceIds: formData.serviceIds,
@@ -171,12 +174,12 @@ export default function CustomerForm({ customer, isEdit = false }: CustomerFormP
           ...cleanData,
           updatedBy: user.uid,
         };
-        await updateCustomer(customer.id, updateData, user.uid);
+        await updateCustomer(customer.id, updateData, user.uid, user.email || '管理者');
         router.push(`/admin/customers/${customer.id}`);
       } else {
         // 新規作成
         const createData: CreateCustomerInput = cleanData;
-        const customerId = await createCustomer(createData, user.uid);
+        const customerId = await createCustomer(createData, user.uid, user.email || '管理者');
         
         // メールアドレスが設定されている場合、自動的にユーザーアカウントを作成
         if (formData.email) {
@@ -255,6 +258,20 @@ export default function CustomerForm({ customer, isEdit = false }: CustomerFormP
               value={formData.companyName}
               onChange={handleInputChange}
               required
+              className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900 px-3 py-2"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              {formData.companyType === 'corporate' ? '会社名カナ' : '氏名カナ'}
+            </label>
+            <input
+              type="text"
+              name="companyNameKana"
+              value={formData.companyNameKana}
+              onChange={handleInputChange}
+              placeholder="カタカナで入力してください"
               className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900 px-3 py-2"
             />
           </div>

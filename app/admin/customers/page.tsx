@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { getCustomers, searchCustomers, cancelCustomer, reactivateCustomer } from '@/lib/firebase/customers';
 import { Customer } from '@/types/customer';
+import { formatJSTDate } from '@/lib/utils/date';
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
@@ -50,10 +51,6 @@ export default function CustomersPage() {
     fetchCustomers();
   }, []);
 
-  const formatDate = (date: Date | undefined) => {
-    if (!date) return '-';
-    return date.toLocaleDateString('ja-JP');
-  };
 
   const getCompanyTypeLabel = (type: string) => {
     return type === 'corporate' ? '法人' : '個人';
@@ -239,7 +236,7 @@ export default function CustomersPage() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {formatDate(customer.contractStartDate)}
+                      {customer.contractStartDate ? formatJSTDate(customer.contractStartDate, { year: 'numeric', month: '2-digit', day: '2-digit' }) : '-'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {getPaymentMethodLabel(customer.paymentMethod)}

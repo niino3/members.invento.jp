@@ -27,6 +27,8 @@ import {
   ServiceLogImage,
   ServiceLogStats,
 } from '@/types/serviceLog';
+import { logActivity } from './activities';
+import { getCustomer } from './customers';
 
 const COLLECTION_NAME = 'serviceLogs';
 const STORAGE_PATH = 'service-logs';
@@ -155,6 +157,18 @@ export async function createServiceLog(
       });
     }
 
+    // 活動を記録
+    const customer = await getCustomer(input.customerId);
+    if (customer) {
+      await logActivity(
+        'service_log_created',
+        docRef.id,
+        customer.companyName,
+        workerId,
+        workerName
+      );
+    }
+
     return docRef.id;
   } catch (error) {
     console.error('Error creating service log:', error);
@@ -183,62 +197,66 @@ export async function getServiceLog(id: string): Promise<ServiceLog | null> {
 // サービスログ一覧を取得（検索・フィルター対応）
 export async function getServiceLogs(params: ServiceLogSearchParams = {}): Promise<ServiceLogListResponse> {
   try {
-    let q = query(collection(db, COLLECTION_NAME));
-
+    // まず総件数を取得するためのクエリ（フィルター条件のみ）
+    let countQuery = query(collection(db, COLLECTION_NAME));
+    
     // フィルター条件を追加
     if (params.customerId) {
-      q = query(q, where('customerId', '==', params.customerId));
+      countQuery = query(countQuery, where('customerId', '==', params.customerId));
     }
     if (params.serviceId) {
-      q = query(q, where('serviceId', '==', params.serviceId));
+      countQuery = query(countQuery, where('serviceId', '==', params.serviceId));
     }
     if (params.workerId) {
-      q = query(q, where('workerId', '==', params.workerId));
+      countQuery = query(countQuery, where('workerId', '==', params.workerId));
     }
     if (params.status) {
-      q = query(q, where('status', '==', params.status));
+      countQuery = query(countQuery, where('status', '==', params.status));
     }
     if (params.startDate) {
-      q = query(q, where('workDate', '>=', Timestamp.fromDate(params.startDate)));
+      countQuery = query(countQuery, where('workDate', '>=', Timestamp.fromDate(params.startDate)));
     }
     if (params.endDate) {
-      q = query(q, where('workDate', '<=', Timestamp.fromDate(params.endDate)));
+      countQuery = query(countQuery, where('workDate', '<=', Timestamp.fromDate(params.endDate)));
     }
-
-    // ソートとページネーション
-    q = query(q, orderBy('workDate', 'desc'));
     
-    if (params.limit) {
-      q = query(q, limit(params.limit + 1)); // +1で次のページがあるかチェック
-    }
+    // ソートを追加
+    countQuery = query(countQuery, orderBy('workDate', 'desc'));
 
-    const querySnapshot = await getDocs(q);
-    const logs: ServiceLog[] = [];
+    // 総件数取得
+    const countSnapshot = await getDocs(countQuery);
+    const allLogs: ServiceLog[] = [];
     
-    querySnapshot.forEach((doc) => {
+    countSnapshot.forEach((doc) => {
       const data = doc.data() as ServiceLogFirestore;
-      logs.push(convertFirestoreToServiceLog(doc, data));
+      allLogs.push(convertFirestoreToServiceLog(doc, data));
     });
 
     // キーワード検索（クライアントサイドで実行）
-    let filteredLogs = logs;
+    let filteredLogs = allLogs;
     if (params.keyword) {
       const keyword = params.keyword.toLowerCase();
-      filteredLogs = logs.filter(log =>
+      filteredLogs = allLogs.filter(log =>
         log.comment.toLowerCase().includes(keyword) ||
         log.workerName.toLowerCase().includes(keyword)
       );
     }
 
+    const total = filteredLogs.length;
+
     // ページネーション処理
-    const hasMore = params.limit ? filteredLogs.length > params.limit : false;
-    if (hasMore && params.limit) {
-      filteredLogs = filteredLogs.slice(0, params.limit);
+    let paginatedLogs = filteredLogs;
+    if (params.offset && params.limit) {
+      paginatedLogs = filteredLogs.slice(params.offset, params.offset + params.limit);
+    } else if (params.limit) {
+      paginatedLogs = filteredLogs.slice(0, params.limit);
     }
 
+    const hasMore = params.limit ? (params.offset || 0) + params.limit < total : false;
+
     return {
-      logs: filteredLogs,
-      total: filteredLogs.length,
+      logs: paginatedLogs,
+      total,
       hasMore,
     };
   } catch (error) {
