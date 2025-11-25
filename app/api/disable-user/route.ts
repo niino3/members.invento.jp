@@ -1,17 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
 import admin from 'firebase-admin';
 
-// Firebase Admin SDKの初期化
+// Firebase Admin SDKの初期化（ビルド時にはスキップ）
 if (!admin.apps.length) {
   const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n');
+  const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
+  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
   
-  admin.initializeApp({
-    credential: admin.credential.cert({
-      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-      clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
-      privateKey: privateKey,
-    }),
-  });
+  // 環境変数がすべて設定されている場合のみ初期化
+  if (privateKey && clientEmail && projectId) {
+    try {
+      admin.initializeApp({
+        credential: admin.credential.cert({
+          projectId: projectId,
+          clientEmail: clientEmail,
+          privateKey: privateKey,
+        }),
+      });
+    } catch (error) {
+      // ビルド時にはエラーを無視
+      if (process.env.NEXT_PHASE !== 'phase-production-build' && 
+          process.env.NEXT_PHASE !== 'phase-development-build') {
+        console.error('Firebase Admin SDK初期化エラー:', error);
+      }
+    }
+  }
 }
 
 export async function POST(request: NextRequest) {
