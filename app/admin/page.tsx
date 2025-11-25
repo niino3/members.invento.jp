@@ -140,7 +140,7 @@ export default function AdminDashboard() {
       )}
 
       {/* 統計カード */}
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
         {statsCards.map((card) => (
           <div
             key={card.name}
@@ -181,7 +181,7 @@ export default function AdminDashboard() {
       {/* クイックアクション */}
       <div>
         <h2 className="text-lg font-medium text-gray-900 mb-4">クイックアクション</h2>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
           {quickActions.map((action) => (
             <Link
               key={action.name}

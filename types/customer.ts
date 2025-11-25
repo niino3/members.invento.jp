@@ -1,7 +1,7 @@
 export type CompanyType = 'corporate' | 'individual';
 export type PaymentMethod = 'bank_transfer' | 'paypal';
 export type InvoiceDeliveryMethod = 'email' | 'postal';
-export type ContractStatus = 'active' | 'cancelled' | 'suspended';
+export type ContractStatus = 'active' | 'trial' | 'cancelled' | 'suspended';
 
 export interface Customer {
   id: string;

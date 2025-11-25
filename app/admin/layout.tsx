@@ -68,8 +68,8 @@ export default function AdminLayout({
                 </span>
               </div>
 
-              {/* ナビゲーションメニュー（デスクトップ） */}
-              <div className="hidden sm:ml-6 sm:flex sm:space-x-8">
+              {/* ナビゲーションメニュー（デスクトップ・タブレット） */}
+              <div className="hidden md:ml-6 md:flex md:space-x-8">
                 {navigation.map((item) => (
                   <Link
                     key={item.name}
@@ -97,8 +97,8 @@ export default function AdminLayout({
                 </button>
               </div>
 
-              {/* モバイルメニューボタン */}
-              <div className="sm:hidden ml-4">
+              {/* モバイル・タブレットメニューボタン */}
+              <div className="md:hidden ml-4">
                 <button
                   onClick={() => setIsMenuOpen(!isMenuOpen)}
                   className="bg-white inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500"
@@ -123,9 +123,9 @@ export default function AdminLayout({
           </div>
         </div>
 
-        {/* モバイルメニュー */}
+        {/* モバイル・タブレットメニュー */}
         {isMenuOpen && (
-          <div className="sm:hidden">
+          <div className="md:hidden">
             <div className="pt-2 pb-3 space-y-1 bg-white border-t border-gray-200">
               {navigation.map((item) => (
                 <Link

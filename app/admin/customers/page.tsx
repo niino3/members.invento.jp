@@ -180,8 +180,10 @@ export default function CustomersPage() {
             )}
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+          <>
+            {/* タブレット・PC用テーブル表示 */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -277,7 +279,63 @@ export default function CustomersPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+            </div>
+            
+            {/* モバイル・小さめタブレット用カード表示 */}
+            <div className="md:hidden space-y-4">
+              {customers.map((customer) => (
+                <div key={customer.id} className="bg-white p-4 rounded-lg shadow border">
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-start">
+                      <h3 className="font-medium text-gray-900">{customer.companyName}</h3>
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        customer.contractStatus === 'active' ? 'bg-green-100 text-green-800' :
+                        customer.contractStatus === 'trial' ? 'bg-blue-100 text-blue-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {customer.contractStatus === 'active' ? '有効' :
+                         customer.contractStatus === 'trial' ? '試用中' : '解約済み'}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600">担当者: {customer.contactName}</p>
+                    <p className="text-sm text-gray-600">種別: {customer.companyType}</p>
+                    <p className="text-sm text-gray-600">契約開始: {customer.contractStartDate ? new Date(customer.contractStartDate).toLocaleDateString('ja-JP') : '-'}</p>
+                    <p className="text-sm text-gray-600">ステータス: {customer.contractStatus}</p>
+                    
+                    <div className="flex justify-end space-x-2 pt-2 border-t border-gray-100">
+                      <Link
+                        href={`/admin/customers/${customer.id}`}
+                        className="text-indigo-600 hover:text-indigo-900 text-sm"
+                      >
+                        詳細
+                      </Link>
+                      <Link
+                        href={`/admin/customers/${customer.id}/edit`}
+                        className="text-indigo-600 hover:text-indigo-900 text-sm"
+                      >
+                        編集
+                      </Link>
+                      {customer.contractStatus === 'cancelled' ? (
+                        <button
+                          onClick={() => handleReactivateCustomer(customer)}
+                          className="text-green-600 hover:text-green-900 text-sm"
+                        >
+                          再有効化
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleCancelCustomer(customer)}
+                          className="text-red-600 hover:text-red-900 text-sm"
+                        >
+                          解約
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
 

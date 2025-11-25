@@ -231,7 +231,7 @@ export default function CustomerForm({ customer, isEdit = false }: CustomerFormP
       {/* 基本情報 */}
       <div className="bg-white shadow rounded-lg p-6">
         <h3 className="text-lg font-medium text-gray-900 mb-4">基本情報</h3>
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-2">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               法人・個人種別 <span className="text-red-500">*</span>
@@ -317,7 +317,7 @@ export default function CustomerForm({ customer, isEdit = false }: CustomerFormP
       {/* 住所情報 */}
       <div className="bg-white shadow rounded-lg p-6">
         <h3 className="text-lg font-medium text-gray-900 mb-4">住所情報</h3>
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-2">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">郵便番号</label>
             <div className="flex gap-2">
@@ -364,7 +364,7 @@ export default function CustomerForm({ customer, isEdit = false }: CustomerFormP
         </div>
 
         <h4 className="text-md font-medium text-gray-900 mt-6 mb-4">転送先住所</h4>
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-2">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">転送先郵便番号</label>
             <div className="flex gap-2">
@@ -414,7 +414,7 @@ export default function CustomerForm({ customer, isEdit = false }: CustomerFormP
       {/* 契約情報 */}
       <div className="bg-white shadow rounded-lg p-6">
         <h3 className="text-lg font-medium text-gray-900 mb-4">契約情報</h3>
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-2">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">契約開始日</label>
             <input
@@ -470,7 +470,7 @@ export default function CustomerForm({ customer, isEdit = false }: CustomerFormP
       {/* 専用電話番号 */}
       <div className="bg-white shadow rounded-lg p-6">
         <h3 className="text-lg font-medium text-gray-900 mb-4">専用電話番号</h3>
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-2">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">専用電話番号</label>
             <input

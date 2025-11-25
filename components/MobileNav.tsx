@@ -29,7 +29,7 @@ export default function MobileNav({ userEmail, onSignOut }: MobileNavProps) {
   ];
 
   return (
-    <div className="sm:hidden">
+    <div className="md:hidden">
       {/* ハンバーガーメニューボタン */}
       <button
         type="button"

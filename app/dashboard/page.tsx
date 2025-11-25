@@ -186,7 +186,7 @@ export default function DashboardPage() {
               {/* サービスサマリー */}
               <div className="bg-white shadow rounded-lg p-6">
                 <h2 className="text-lg font-medium text-gray-900 mb-4">サービスサマリー</h2>
-                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-500">会社名</label>
                     <p className="mt-1 text-sm text-gray-900">{customer.companyName}</p>
@@ -212,7 +212,7 @@ export default function DashboardPage() {
                 {services.length === 0 ? (
                   <p className="text-gray-500">現在利用中のサービスはありません</p>
                 ) : (
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3">
                     {services.map((service) => (
                       <div key={service.id} className="border border-gray-200 rounded-lg p-4">
                         <div className="flex justify-between items-start mb-2">
@@ -241,7 +241,7 @@ export default function DashboardPage() {
               {/* クイックアクション */}
               <div className="bg-white shadow rounded-lg p-6">
                 <h2 className="text-lg font-medium text-gray-900 mb-4">クイックアクション</h2>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3">
                   <Link
                     href="/dashboard/services"
                     className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"

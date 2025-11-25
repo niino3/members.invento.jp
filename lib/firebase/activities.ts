@@ -43,15 +43,22 @@ export async function logActivity(
   metadata?: Record<string, any>
 ): Promise<void> {
   try {
-    await addDoc(collection(db, COLLECTION_NAME), {
+    // Firestoreはundefined値を許可しないため、metadataが存在する場合のみ含める
+    const activityData: any = {
       type,
       entityId,
       entityName,
       userId,
       userName,
       createdAt: serverTimestamp(),
-      metadata,
-    });
+    };
+    
+    // metadataが存在する場合のみ追加
+    if (metadata !== undefined && metadata !== null) {
+      activityData.metadata = metadata;
+    }
+    
+    await addDoc(collection(db, COLLECTION_NAME), activityData);
   } catch (error) {
     console.error('Failed to log activity:', error);
     // 活動ログの失敗は重要な操作を妨げないようにエラーを投げない
