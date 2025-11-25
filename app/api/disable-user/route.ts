@@ -1,30 +1,30 @@
 import { NextRequest, NextResponse } from 'next/server';
-import admin from 'firebase-admin';
 
-// Firebase Admin SDKの初期化（ビルド時にはスキップ）
-if (!admin.apps.length) {
-  const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n');
-  const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
-  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+// Firebase Admin SDKの初期化関数（実行時のみ呼び出される）
+async function getAdminAuth() {
+  // 動的インポートでビルド時のエラーを回避
+  const admin = await import('firebase-admin');
   
-  // 環境変数がすべて設定されている場合のみ初期化
-  if (privateKey && clientEmail && projectId) {
-    try {
-      admin.initializeApp({
-        credential: admin.credential.cert({
+  if (!admin.default.apps.length) {
+    const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n');
+    const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
+    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+    
+    // 環境変数がすべて設定されている場合のみ初期化
+    if (privateKey && clientEmail && projectId) {
+      admin.default.initializeApp({
+        credential: admin.default.credential.cert({
           projectId: projectId,
           clientEmail: clientEmail,
           privateKey: privateKey,
         }),
       });
-    } catch (error) {
-      // ビルド時にはエラーを無視
-      if (process.env.NEXT_PHASE !== 'phase-production-build' && 
-          process.env.NEXT_PHASE !== 'phase-development-build') {
-        console.error('Firebase Admin SDK初期化エラー:', error);
-      }
+    } else {
+      throw new Error('Firebase Admin SDK環境変数が設定されていません');
     }
   }
+  
+  return admin.default.auth();
 }
 
 export async function POST(request: NextRequest) {
@@ -38,11 +38,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Firebase Admin SDKを取得（実行時のみ）
+    const auth = await getAdminAuth();
+    
     // メールアドレスからユーザーを取得
-    const userRecord = await admin.auth().getUserByEmail(email);
+    const userRecord = await auth.getUserByEmail(email);
     
     // ユーザーアカウントの有効/無効を切り替え
-    await admin.auth().updateUser(userRecord.uid, {
+    await auth.updateUser(userRecord.uid, {
       disabled: disabled || false
     });
 
