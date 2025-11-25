@@ -1,7 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { Resend } from 'resend';
-
-const resend = new Resend(process.env.RESEND_API_KEY);
 
 export async function POST(req: NextRequest) {
   try {
@@ -14,6 +11,10 @@ export async function POST(req: NextRequest) {
     if (!inquiry || !type) {
       return NextResponse.json({ error: 'Inquiry data and type are required' }, { status: 400 });
     }
+
+    // Resendを動的インポート（ビルド時のエラーを回避）
+    const { Resend } = await import('resend');
+    const resend = new Resend(process.env.RESEND_API_KEY);
 
     // 管理者メールアドレス（環境変数から取得）
     const adminEmailAddress = process.env.ADMIN_EMAIL || 'admin@fortissimo.co.jp';
@@ -45,24 +46,6 @@ export async function POST(req: NextRequest) {
           お問い合わせの内容によってはお返事にお時間をいただく場合がございます。</p>
           
           <p>よろしくお願いいたします。</p>
-        `;
-
-        // 管理者への通知メール
-        const adminEmailHtml = `
-          <h2>新規問い合わせがありました</h2>
-          
-          <h3>顧客情報</h3>
-          <p><strong>会社名：</strong>${inquiry.companyName}</p>
-          <p><strong>お名前：</strong>${inquiry.customerName}</p>
-          <p><strong>メール：</strong>${inquiry.customerEmail}</p>
-          
-          <h3>問い合わせ内容</h3>
-          <p><strong>件名：</strong>${inquiry.subject}</p>
-          <p><strong>カテゴリー：</strong>${inquiry.categoryLabel}</p>
-          <p><strong>内容：</strong></p>
-          <pre style="white-space: pre-wrap;">${inquiry.content}</pre>
-          
-          <p><a href="${process.env.NEXT_PUBLIC_APP_URL}/admin/inquiries">管理画面で確認する</a></p>
         `;
 
         // Resendでメール送信
