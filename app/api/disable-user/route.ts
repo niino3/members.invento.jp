@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth } from '@/lib/firebase/admin';
 
 export async function POST(request: NextRequest) {
   try {
@@ -12,11 +11,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Firebase Admin SDKを動的インポート（ビルド時のエラーを回避）
+    const admin = await import('firebase-admin');
+    
+    // 初期化（まだ初期化されていない場合）
+    if (!admin.default.apps.length) {
+      const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n');
+      const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
+      const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+      
+      if (privateKey && clientEmail && projectId) {
+        admin.default.initializeApp({
+          credential: admin.default.credential.cert({
+            projectId: projectId,
+            clientEmail: clientEmail,
+            privateKey: privateKey,
+          }),
+        });
+      } else {
+        throw new Error('Firebase Admin SDK環境変数が設定されていません');
+      }
+    }
+
+    const auth = admin.default.auth();
+
     // メールアドレスからユーザーを取得
-    const userRecord = await adminAuth.getUserByEmail(email);
+    const userRecord = await auth.getUserByEmail(email);
     
     // ユーザーアカウントの有効/無効を切り替え
-    await adminAuth.updateUser(userRecord.uid, {
+    await auth.updateUser(userRecord.uid, {
       disabled: disabled || false
     });
 

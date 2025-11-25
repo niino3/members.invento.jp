@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { adminAuth, adminDb } from '@/lib/firebase/admin';
 
 // 安全な初期パスワードを生成
 function generateSecurePassword(length = 12): string {
@@ -36,18 +35,43 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Firebase Admin SDKを動的インポート（ビルド時のエラーを回避）
+    const admin = await import('firebase-admin');
+    
+    // 初期化（まだ初期化されていない場合）
+    if (!admin.default.apps.length) {
+      const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n');
+      const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
+      const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+      
+      if (privateKey && clientEmail && projectId) {
+        admin.default.initializeApp({
+          credential: admin.default.credential.cert({
+            projectId: projectId,
+            clientEmail: clientEmail,
+            privateKey: privateKey,
+          }),
+        });
+      } else {
+        throw new Error('Firebase Admin SDK環境変数が設定されていません');
+      }
+    }
+
+    const auth = admin.default.auth();
+    const db = admin.default.firestore();
+
     // 安全な初期パスワードを生成
     const initialPassword = generateSecurePassword(12);
 
     // Firebase Authenticationにユーザーを作成
-    const userRecord = await adminAuth.createUser({
+    const userRecord = await auth.createUser({
       email,
       password: initialPassword,
       emailVerified: false,
     });
 
     // Firestoreにユーザードキュメントを作成
-    await adminDb.collection('users').doc(userRecord.uid).set({
+    await db.collection('users').doc(userRecord.uid).set({
       email,
       role,
       customerId,
