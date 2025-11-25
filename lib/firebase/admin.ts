@@ -71,18 +71,33 @@ if (!isBuildTime && getApps().length === 0) {
 }
 
 // 実行時にのみ初期化される（ビルド時にはエラーが発生しない）
-export const adminAuth = getApps().length > 0 ? getAuth() : (() => {
-  if (isBuildTime) {
-    // ビルド時にはダミーオブジェクトを返す
-    return {} as any;
+// Proxyを使用して、実際に使用される時のみ初期化
+export const adminAuth = new Proxy({} as ReturnType<typeof getAuth>, {
+  get(_target, prop) {
+    if (isBuildTime) {
+      // ビルド時には何もしない
+      return () => {};
+    }
+    const auth = getAdminAuth();
+    const value = auth[prop as keyof ReturnType<typeof getAuth>];
+    if (typeof value === 'function') {
+      return value.bind(auth);
+    }
+    return value;
   }
-  return getAdminAuth();
-})();
+});
 
-export const adminDb = getApps().length > 0 ? getFirestore() : (() => {
-  if (isBuildTime) {
-    // ビルド時にはダミーオブジェクトを返す
-    return {} as any;
+export const adminDb = new Proxy({} as ReturnType<typeof getFirestore>, {
+  get(_target, prop) {
+    if (isBuildTime) {
+      // ビルド時には何もしない
+      return () => {};
+    }
+    const db = getAdminDb();
+    const value = db[prop as keyof ReturnType<typeof getFirestore>];
+    if (typeof value === 'function') {
+      return value.bind(db);
+    }
+    return value;
   }
-  return getAdminDb();
-})();
+});
