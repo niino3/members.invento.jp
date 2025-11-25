@@ -2,6 +2,10 @@ import { initializeApp, getApps, cert } from 'firebase-admin/app';
 import { getAuth } from 'firebase-admin/auth';
 import { getFirestore } from 'firebase-admin/firestore';
 
+// ビルド時かどうかを判定
+const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build' || 
+                     process.env.NEXT_PHASE === 'phase-development-build';
+
 // Firebase Admin SDKの初期化関数（実行時のみ呼び出される）
 function initializeAdmin() {
   if (getApps().length > 0) {
@@ -51,15 +55,34 @@ function getAdminDb() {
   return adminDbInstance;
 }
 
-// 実行時にのみ初期化される（ビルド時にはエラーが発生しない）
-export const adminAuth = new Proxy({} as ReturnType<typeof getAuth>, {
-  get(_target, prop) {
-    return getAdminAuth()[prop as keyof ReturnType<typeof getAuth>];
+// ビルド時には初期化をスキップ（実行時のみ初期化）
+if (!isBuildTime && getApps().length === 0) {
+  const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n');
+  const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
+  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
+  
+  if (privateKey && clientEmail && projectId) {
+    try {
+      initializeAdmin();
+    } catch (error) {
+      // 初期化エラーは無視（実行時に再試行される）
+    }
   }
-});
+}
 
-export const adminDb = new Proxy({} as ReturnType<typeof getFirestore>, {
-  get(_target, prop) {
-    return getAdminDb()[prop as keyof ReturnType<typeof getFirestore>];
+// 実行時にのみ初期化される（ビルド時にはエラーが発生しない）
+export const adminAuth = getApps().length > 0 ? getAuth() : (() => {
+  if (isBuildTime) {
+    // ビルド時にはダミーオブジェクトを返す
+    return {} as any;
   }
-});
+  return getAdminAuth();
+})();
+
+export const adminDb = getApps().length > 0 ? getFirestore() : (() => {
+  if (isBuildTime) {
+    // ビルド時にはダミーオブジェクトを返す
+    return {} as any;
+  }
+  return getAdminDb();
+})();
