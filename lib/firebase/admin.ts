@@ -55,28 +55,15 @@ function getAdminDb() {
   return adminDbInstance;
 }
 
-// ビルド時には初期化をスキップ（実行時のみ初期化）
-if (!isBuildTime && getApps().length === 0) {
-  const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n');
-  const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
-  const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
-  
-  if (privateKey && clientEmail && projectId) {
-    try {
-      initializeAdmin();
-    } catch (error) {
-      // 初期化エラーは無視（実行時に再試行される）
-    }
-  }
-}
-
 // 実行時にのみ初期化される（ビルド時にはエラーが発生しない）
 // Proxyを使用して、実際に使用される時のみ初期化
 export const adminAuth = new Proxy({} as ReturnType<typeof getAuth>, {
   get(_target, prop) {
     if (isBuildTime) {
-      // ビルド時には何もしない
-      return () => {};
+      // ビルド時にはダミー関数を返す
+      return () => {
+        throw new Error('Firebase Admin SDK is not available during build time');
+      };
     }
     const auth = getAdminAuth();
     const value = auth[prop as keyof ReturnType<typeof getAuth>];
@@ -90,8 +77,10 @@ export const adminAuth = new Proxy({} as ReturnType<typeof getAuth>, {
 export const adminDb = new Proxy({} as ReturnType<typeof getFirestore>, {
   get(_target, prop) {
     if (isBuildTime) {
-      // ビルド時には何もしない
-      return () => {};
+      // ビルド時にはダミー関数を返す
+      return () => {
+        throw new Error('Firebase Admin SDK is not available during build time');
+      };
     }
     const db = getAdminDb();
     const value = db[prop as keyof ReturnType<typeof getFirestore>];
