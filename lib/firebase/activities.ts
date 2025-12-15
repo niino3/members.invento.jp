@@ -43,22 +43,15 @@ export async function logActivity(
   metadata?: Record<string, any>
 ): Promise<void> {
   try {
-    // Firestoreはundefined値を許可しないため、metadataが存在する場合のみ含める
-    const activityData: any = {
+    await addDoc(collection(db, COLLECTION_NAME), {
       type,
       entityId,
       entityName,
       userId,
       userName,
       createdAt: serverTimestamp(),
-    };
-    
-    // metadataが存在する場合のみ追加
-    if (metadata !== undefined && metadata !== null) {
-      activityData.metadata = metadata;
-    }
-    
-    await addDoc(collection(db, COLLECTION_NAME), activityData);
+      metadata,
+    });
   } catch (error) {
     console.error('Failed to log activity:', error);
     // 活動ログの失敗は重要な操作を妨げないようにエラーを投げない
@@ -76,7 +69,7 @@ export async function getRecentActivities(limitCount: number = 10): Promise<Acti
 
     const querySnapshot = await getDocs(q);
     const activities: Activity[] = [];
-    
+
     querySnapshot.forEach((doc) => {
       const data = doc.data() as ActivityFirestore;
       activities.push(convertFirestoreToActivity(doc, data));
@@ -104,7 +97,7 @@ export async function getActivitiesByDateRange(
 
     const querySnapshot = await getDocs(q);
     const activities: Activity[] = [];
-    
+
     querySnapshot.forEach((doc) => {
       const data = doc.data() as ActivityFirestore;
       activities.push(convertFirestoreToActivity(doc, data));
@@ -128,7 +121,7 @@ export function getActivityLabel(type: ActivityType): string {
     inquiry_created: '新規問い合わせ',
     inquiry_resolved: '問い合わせ対応完了',
   };
-  
+
   return labels[type] || type;
 }
 
@@ -143,7 +136,7 @@ export function getActivityIcon(type: ActivityType): string {
     inquiry_created: '📧',
     inquiry_resolved: '✅',
   };
-  
+
   return icons[type] || '📌';
 }
 
