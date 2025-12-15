@@ -117,7 +117,6 @@ export default function AdminLayout({
                     />
                   </svg>
                 </button>
-              </div>
             </div>
           </div>
         </div>
