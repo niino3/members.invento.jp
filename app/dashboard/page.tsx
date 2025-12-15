@@ -253,6 +253,16 @@ export default function DashboardPage() {
                     </div>
                   </Link>
                   <Link
+                    href="/dashboard/service-logs"
+                    className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                  >
+                    <span className="text-2xl mr-3">📝</span>
+                    <div>
+                      <h3 className="text-sm font-medium text-gray-900">サービスログ</h3>
+                      <p className="text-xs text-gray-500">作業履歴を確認</p>
+                    </div>
+                  </Link>
+                  <Link
                     href="/dashboard/inquiry"
                     className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
                   >
