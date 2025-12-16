@@ -68,13 +68,13 @@ export default function AdminLayout({
                 </span>
               </div>
 
-              {/* ナビゲーションメニュー（デスクトップ・タブレット） */}
-              <div className="hidden md:ml-6 md:flex md:space-x-8">
+              {/* ナビゲーションメニュー（デスクトップ） */}
+              <div className="hidden lg:ml-6 lg:flex lg:space-x-6">
                 {navigation.map((item) => (
                   <Link
                     key={item.name}
                     href={item.href}
-                    className="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-2"
+                    className="border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 whitespace-nowrap py-2 px-1 border-b-2 font-medium text-sm flex items-center gap-1"
                   >
                     <span>{item.icon}</span>
                     {item.name}
@@ -84,7 +84,7 @@ export default function AdminLayout({
             </div>
 
             {/* デスクトップユーザーメニュー */}
-            <div className="hidden md:flex md:items-center">
+            <div className="hidden lg:flex lg:items-center">
               <span className="text-sm text-gray-700 mr-4">
                 {user.email}
               </span>
@@ -97,7 +97,7 @@ export default function AdminLayout({
             </div>
 
             {/* モバイル・タブレットメニューボタン */}
-            <div className="md:hidden flex items-center">
+            <div className="lg:hidden flex items-center">
                 <button
                   onClick={() => setIsMenuOpen(!isMenuOpen)}
                   className="bg-white inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500"
@@ -123,7 +123,7 @@ export default function AdminLayout({
 
         {/* モバイル・タブレットメニュー */}
         {isMenuOpen && (
-          <div className="md:hidden">
+          <div className="lg:hidden">
             <div className="pt-2 pb-3 space-y-1 bg-white border-t border-gray-200">
               {navigation.map((item) => (
                 <Link
