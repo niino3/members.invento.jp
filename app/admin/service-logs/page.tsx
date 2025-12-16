@@ -118,6 +118,10 @@ export default function ServiceLogsPage() {
 
   const getServiceName = (serviceId: string) => {
     const service = services.find(s => s.id === serviceId);
+    if (!service) {
+      console.log('Service not found for ID:', serviceId);
+      console.log('Available services:', services.map(s => ({ id: s.id, name: s.name, logEnabled: s.logEnabled })));
+    }
     return service ? service.name : 'Unknown';
   };
 
@@ -179,13 +183,11 @@ export default function ServiceLogsPage() {
               className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900 h-10"
             >
               <option value="">すべてのサービス</option>
-              {services
-                .filter(service => service.logEnabled)
-                .map((service) => (
-                  <option key={service.id} value={service.id}>
-                    {service.name}
-                  </option>
-                ))}
+              {services.map((service) => (
+                <option key={service.id} value={service.id}>
+                  {service.name}
+                </option>
+              ))}
             </select>
           </div>
 
