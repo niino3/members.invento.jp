@@ -18,6 +18,7 @@ export interface CreateServiceLogInput {
   comment: string;
   images?: File[]; // アップロード用
   status: ServiceLogStatus;
+  shippingCostId?: string; // 郵送料ID（オプション）
 }
 
 export interface UpdateServiceLogInput {
@@ -26,6 +27,7 @@ export interface UpdateServiceLogInput {
   images?: File[]; // 新規追加画像
   removeImageIds?: string[]; // 削除する画像のID
   status?: ServiceLogStatus;
+  shippingCostId?: string; // 郵送料ID（オプション）
 }
 
 // サービスログのメイン型
@@ -39,6 +41,7 @@ export interface ServiceLog {
   comment: string;
   images: ServiceLogImage[];
   status: ServiceLogStatus;
+  shippingCostId?: string; // 郵送料ID（オプション）
   createdAt: Date;
   updatedAt: Date;
 }
@@ -92,6 +95,7 @@ export interface ServiceLogFirestore {
     uploadedAt: any; // Firestore Timestamp
   }[];
   status: ServiceLogStatus;
+  shippingCostId?: string; // 郵送料ID（オプション）
   createdAt: any; // Firestore Timestamp
   updatedAt: any; // Firestore Timestamp
 }

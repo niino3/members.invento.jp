@@ -51,6 +51,7 @@ export function convertFirestoreToServiceLog(
       uploadedAt: img.uploadedAt?.toDate() || new Date(),
     })) || [],
     status: data.status,
+    shippingCostId: data.shippingCostId,
     createdAt: data.createdAt?.toDate() || new Date(),
     updatedAt: data.updatedAt?.toDate() || new Date(),
   };
@@ -70,6 +71,7 @@ export function convertServiceLogToFirestore(serviceLog: Omit<ServiceLog, 'id'>)
       uploadedAt: Timestamp.fromDate(img.uploadedAt),
     })),
     status: serviceLog.status,
+    shippingCostId: serviceLog.shippingCostId,
     createdAt: Timestamp.fromDate(serviceLog.createdAt),
     updatedAt: Timestamp.fromDate(serviceLog.updatedAt),
   };
@@ -131,6 +133,7 @@ export async function createServiceLog(
       comment: input.comment,
       images: [],
       status: input.status,
+      shippingCostId: input.shippingCostId,
       createdAt: serverTimestamp() as Timestamp,
       updatedAt: serverTimestamp() as Timestamp,
     };
@@ -158,15 +161,17 @@ export async function createServiceLog(
     }
 
     // 活動を記録
-    const customer = await getCustomer(input.customerId);
-    if (customer) {
-      await logActivity(
-        'service_log_created',
-        docRef.id,
-        customer.companyName,
-        workerId,
-        workerName
-      );
+    if (input.customerId) {
+      const customer = await getCustomer(input.customerId);
+      if (customer) {
+        await logActivity(
+          'service_log_created',
+          docRef.id,
+          customer.companyName,
+          workerId,
+          workerName
+        );
+      }
     }
 
     return docRef.id;
@@ -279,6 +284,7 @@ export async function updateServiceLog(
     if (input.workDate) updateData.workDate = Timestamp.fromDate(input.workDate);
     if (input.comment !== undefined) updateData.comment = input.comment;
     if (input.status) updateData.status = input.status;
+    if (input.shippingCostId !== undefined) updateData.shippingCostId = input.shippingCostId;
 
     // 既存の画像情報を取得
     const existingDoc = await getDoc(docRef);

@@ -7,8 +7,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { getServiceLog, updateServiceLog } from '@/lib/firebase/serviceLogs';
 import { getCustomers } from '@/lib/firebase/customers';
 import { getServices } from '@/lib/firebase/services';
+import { getActiveShippingCostsOrderedByDisplay } from '@/lib/firebase/shippingCosts';
 import { Customer } from '@/types/customer';
 import { Service } from '@/types/service';
+import { ShippingCost } from '@/types/shippingCost';
 import { ServiceLog, UpdateServiceLogInput } from '@/types/serviceLog';
 import ImageUploader from '@/components/ImageUploader';
 import { dateToJSTString, formatJSTDate } from '@/lib/utils/date';
@@ -26,11 +28,13 @@ export default function EditServiceLogPage() {
   const [serviceLog, setServiceLog] = useState<ServiceLog | null>(null);
   const [customer, setCustomer] = useState<Customer | null>(null);
   const [service, setService] = useState<Service | null>(null);
-  
+  const [shippingCosts, setShippingCosts] = useState<ShippingCost[]>([]);
+
   const [formData, setFormData] = useState({
     workDate: '',
     comment: '',
     status: 'published' as 'draft' | 'published',
+    shippingCostId: '',
   });
   
   const [newImages, setNewImages] = useState<File[]>([]);
@@ -54,25 +58,28 @@ export default function EditServiceLogPage() {
         }
         
         setServiceLog(log);
-        
+
         // フォームデータを設定（日本時間で表示）
         setFormData({
           workDate: dateToJSTString(log.workDate),
           comment: log.comment,
           status: log.status,
+          shippingCostId: log.shippingCostId || '',
         });
-        
+
         // 関連データを取得
-        const [customersResult, servicesData] = await Promise.all([
+        const [customersResult, servicesData, shippingCostsData] = await Promise.all([
           getCustomers(),
           getServices(),
+          getActiveShippingCostsOrderedByDisplay(),
         ]);
         
         const customerData = customersResult.customers.find(c => c.id === log.customerId);
         const serviceData = servicesData.find(s => s.id === log.serviceId);
-        
+
         setCustomer(customerData || null);
         setService(serviceData || null);
+        setShippingCosts(shippingCostsData);
       } catch (error) {
         console.error('Failed to fetch data:', error);
         setError('データの取得に失敗しました');
@@ -117,16 +124,17 @@ export default function EditServiceLogPage() {
         workDate: new Date(formData.workDate),
         comment: formData.comment,
         status: formData.status,
+        shippingCostId: formData.shippingCostId || undefined,
       };
-      
+
       if (newImages.length > 0) {
         input.images = newImages;
       }
-      
+
       if (removedImageIds.length > 0) {
         input.removeImageIds = removedImageIds;
       }
-      
+
       await updateServiceLog(logId, input);
       
       router.push('/admin/service-logs');
@@ -262,22 +270,41 @@ export default function EditServiceLogPage() {
                 公開にすると顧客がログを閲覧できるようになります。
               </p>
             </div>
+
+            {/* 郵送料 */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                郵送料
+              </label>
+              <select
+                name="shippingCostId"
+                value={formData.shippingCostId}
+                onChange={handleInputChange}
+                className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+              >
+                <option value="">郵送なし</option>
+                {shippingCosts.map((cost) => (
+                  <option key={cost.id} value={cost.id}>
+                    {cost.name} - ¥{cost.price.toLocaleString('ja-JP')}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 
         {/* 作業内容 */}
         <div className="bg-white shadow rounded-lg p-6">
           <h2 className="text-lg font-medium text-gray-900 mb-4">作業内容</h2>
-          
+
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
-              コメント・作業内容 <span className="text-red-500">*</span>
+              コメント・作業内容
             </label>
             <textarea
               name="comment"
               value={formData.comment}
               onChange={handleInputChange}
-              required
               rows={10}
               className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
               style={{ color: '#000000 !important', minHeight: '240px', fontSize: '14px' }}

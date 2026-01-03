@@ -7,8 +7,10 @@ import { useAuth } from '@/contexts/AuthContext';
 import { createServiceLog } from '@/lib/firebase/serviceLogs';
 import { getCustomers } from '@/lib/firebase/customers';
 import { getServices } from '@/lib/firebase/services';
+import { getActiveShippingCostsOrderedByDisplay } from '@/lib/firebase/shippingCosts';
 import { Customer } from '@/types/customer';
 import { Service } from '@/types/service';
+import { ShippingCost } from '@/types/shippingCost';
 import { CreateServiceLogInput } from '@/types/serviceLog';
 import ImageUploader from '@/components/ImageUploader';
 import { getCurrentJSTDateTime } from '@/lib/utils/date';
@@ -21,6 +23,7 @@ export default function NewServiceLogPage() {
 
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [services, setServices] = useState<Service[]>([]);
+  const [shippingCosts, setShippingCosts] = useState<ShippingCost[]>([]);
   const [availableServices, setAvailableServices] = useState<Service[]>([]);
   const [selectedKanaGroup, setSelectedKanaGroup] = useState<string>('');
   const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
@@ -30,6 +33,7 @@ export default function NewServiceLogPage() {
     serviceId: '',
     workDate: getCurrentJSTDateTime(), // 日本時間での現在時刻
     comment: '',
+    shippingCostId: '',
   });
 
   const [images, setImages] = useState<File[]>([]);
@@ -45,14 +49,26 @@ export default function NewServiceLogPage() {
       if (!user || user.role !== 'admin') return;
 
       try {
-        const [customersResult, servicesData] = await Promise.all([
+        const [customersResult, servicesData, shippingCostsData] = await Promise.all([
           getCustomers(),
           getServices(),
+          getActiveShippingCostsOrderedByDisplay(),
         ]);
 
-        setCustomers(customersResult.customers);
         // ログ記録が有効なサービスのみ
-        setServices(servicesData.filter(s => s.logEnabled));
+        const logEnabledServices = servicesData.filter(s => s.logEnabled);
+        setServices(logEnabledServices);
+        setShippingCosts(shippingCostsData);
+
+        // ログ記録が有効なサービスのIDリスト
+        const logEnabledServiceIds = logEnabledServices.map(s => s.id);
+
+        // ログ記録が有効なサービスを契約している顧客のみフィルタリング
+        const filteredCustomers = customersResult.customers.filter(customer =>
+          customer.serviceIds.some(serviceId => logEnabledServiceIds.includes(serviceId))
+        );
+
+        setCustomers(filteredCustomers);
       } catch (error) {
         console.error('Failed to fetch data:', error);
         setError('データの取得に失敗しました');
@@ -67,25 +83,38 @@ export default function NewServiceLogPage() {
     if (selectedKanaGroup) {
       const getKanaGroup = (kana: string | undefined): string => {
         if (!kana || kana.length === 0) return 'その他';
+
+        // 濁音・半濁音を清音に変換するマップ
+        const dakutenMap: { [key: string]: string } = {
+          'ガ': 'カ', 'ギ': 'キ', 'グ': 'ク', 'ゲ': 'ケ', 'ゴ': 'コ',
+          'ザ': 'サ', 'ジ': 'シ', 'ズ': 'ス', 'ゼ': 'セ', 'ゾ': 'ソ',
+          'ダ': 'タ', 'ヂ': 'チ', 'ヅ': 'ツ', 'デ': 'テ', 'ド': 'ト',
+          'バ': 'ハ', 'ビ': 'ヒ', 'ブ': 'フ', 'ベ': 'ヘ', 'ボ': 'ホ',
+          'パ': 'ハ', 'ピ': 'ヒ', 'プ': 'フ', 'ペ': 'ヘ', 'ポ': 'ホ',
+          'ヴ': 'ウ',
+        };
+
         const firstChar = kana.charAt(0);
+        // 濁音・半濁音を清音に変換
+        const seionChar = dakutenMap[firstChar] || firstChar;
 
         // カナ行の判定
-        if (firstChar >= 'ア' && firstChar <= 'オ') return 'ア行';
-        if (firstChar >= 'カ' && firstChar <= 'コ') return 'カ行';
-        if (firstChar >= 'サ' && firstChar <= 'ソ') return 'サ行';
-        if (firstChar >= 'タ' && firstChar <= 'ト') return 'タ行';
-        if (firstChar >= 'ナ' && firstChar <= 'ノ') return 'ナ行';
-        if (firstChar >= 'ハ' && firstChar <= 'ホ') return 'ハ行';
-        if (firstChar >= 'マ' && firstChar <= 'モ') return 'マ行';
-        if (firstChar >= 'ヤ' && firstChar <= 'ヨ') return 'ヤ行';
-        if (firstChar >= 'ラ' && firstChar <= 'ロ') return 'ラ行';
-        if (firstChar >= 'ワ' && firstChar <= 'ン') return 'ワ行';
-        if (firstChar >= 'ａ' && firstChar <= 'ｚ') return '英数字';
-        if (firstChar >= 'Ａ' && firstChar <= 'Ｚ') return '英数字';
-        if (firstChar >= 'A' && firstChar <= 'Z') return '英数字';
-        if (firstChar >= 'a' && firstChar <= 'z') return '英数字';
-        if (firstChar >= '0' && firstChar <= '9') return '英数字';
-        if (firstChar >= '０' && firstChar <= '９') return '英数字';
+        if (seionChar >= 'ア' && seionChar <= 'オ') return 'ア行';
+        if (seionChar >= 'カ' && seionChar <= 'コ') return 'カ行';
+        if (seionChar >= 'サ' && seionChar <= 'ソ') return 'サ行';
+        if (seionChar >= 'タ' && seionChar <= 'ト') return 'タ行';
+        if (seionChar >= 'ナ' && seionChar <= 'ノ') return 'ナ行';
+        if (seionChar >= 'ハ' && seionChar <= 'ホ') return 'ハ行';
+        if (seionChar >= 'マ' && seionChar <= 'モ') return 'マ行';
+        if (seionChar >= 'ヤ' && seionChar <= 'ヨ') return 'ヤ行';
+        if (seionChar >= 'ラ' && seionChar <= 'ロ') return 'ラ行';
+        if (seionChar >= 'ワ' && seionChar <= 'ン') return 'ワ行';
+        if (seionChar >= 'ａ' && seionChar <= 'ｚ') return '英数字';
+        if (seionChar >= 'Ａ' && seionChar <= 'Ｚ') return '英数字';
+        if (seionChar >= 'A' && seionChar <= 'Z') return '英数字';
+        if (seionChar >= 'a' && seionChar <= 'z') return '英数字';
+        if (seionChar >= '0' && seionChar <= '9') return '英数字';
+        if (seionChar >= '０' && seionChar <= '９') return '英数字';
         return 'その他';
       };
 
@@ -138,6 +167,17 @@ export default function NewServiceLogPage() {
 
     if (!user || user.role !== 'admin') return;
 
+    // バリデーション
+    if (!formData.customerId) {
+      setError('顧客を選択してください');
+      return;
+    }
+
+    if (!formData.serviceId) {
+      setError('サービスが選択されていません。顧客を選択してください');
+      return;
+    }
+
     setSubmitting(true);
     setError('');
 
@@ -149,6 +189,7 @@ export default function NewServiceLogPage() {
         comment: formData.comment,
         status: 'published', // 常に公開
         images: images,
+        shippingCostId: formData.shippingCostId || undefined,
       };
 
       await createServiceLog(input, user.uid, user.displayName || user.email || 'Unknown');
@@ -276,13 +317,35 @@ export default function NewServiceLogPage() {
                 サービス
               </label>
               <div className="block w-full rounded-md border-2 border-gray-300 bg-gray-50 px-4 py-3 text-lg text-gray-900">
-                ビジネス住所利用
+                {availableServices.length > 0
+                  ? availableServices[0].name
+                  : '（顧客を選択するとサービスが表示されます）'}
               </div>
               <input
                 type="hidden"
                 name="serviceId"
                 value={availableServices[0]?.id || ''}
               />
+            </div>
+
+            {/* 郵送料選択 */}
+            <div>
+              <label className="block text-base font-bold text-gray-900 mb-2">
+                郵送料
+              </label>
+              <select
+                name="shippingCostId"
+                value={formData.shippingCostId}
+                onChange={handleInputChange}
+                className="block w-full rounded-md border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-lg text-gray-900 px-4 py-3 h-14"
+              >
+                <option value="">郵送なし</option>
+                {shippingCosts.map((cost) => (
+                  <option key={cost.id} value={cost.id}>
+                    {cost.name} - ¥{cost.price.toLocaleString('ja-JP')}
+                  </option>
+                ))}
+              </select>
             </div>
 
             {/* 作業日時 */}
