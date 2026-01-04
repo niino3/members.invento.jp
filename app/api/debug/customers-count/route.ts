@@ -37,14 +37,14 @@ export async function GET() {
       'ヴ': 'ウ',
     };
 
-    function getKanaGroup(kana: string | undefined): string {
+    const getKanaGroup = (kana: string | undefined): string => {
       if (!kana || kana.length === 0) return 'その他';
       const firstChar = kana.charAt(0);
       const seionChar = dakutenMap[firstChar] || firstChar;
 
       if (seionChar >= 'ハ' && seionChar <= 'ホ') return 'ハ行';
       return '';
-    }
+    };
 
     allCustomers.forEach((doc) => {
       const data = doc.data();
