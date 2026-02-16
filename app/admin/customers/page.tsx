@@ -11,6 +11,7 @@ export default function CustomersPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
+  const [showCancelled, setShowCancelled] = useState(false);
   const [cancelConfirm, setCancelConfirm] = useState<Customer | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [reactivateConfirm, setReactivateConfirm] = useState<Customer | null>(null);
@@ -35,9 +36,13 @@ export default function CustomersPage() {
     fetchCustomers();
   }, []);
 
-  // クライアントサイドでフリーワード検索
+  // 解約顧客の表示制御 → フリーワード検索
+  const activeCustomers = showCancelled
+    ? allCustomers
+    : allCustomers.filter((c) => c.contractStatus !== 'cancelled');
+
   const filteredCustomers = searchTerm.trim()
-    ? allCustomers.filter((c) => {
+    ? activeCustomers.filter((c) => {
         const term = searchTerm.toLowerCase();
         return (
           c.companyName?.toLowerCase().includes(term) ||
@@ -49,7 +54,7 @@ export default function CustomersPage() {
           c.notes?.toLowerCase().includes(term)
         );
       })
-    : allCustomers;
+    : activeCustomers;
 
   // ページング
   const totalPages = Math.ceil(filteredCustomers.length / PAGE_SIZE);
@@ -159,11 +164,25 @@ export default function CustomersPage() {
             </button>
           )}
         </div>
-        {searchTerm && (
-          <p className="mt-2 text-sm text-gray-500">
-            {filteredCustomers.length}件の顧客が見つかりました
-          </p>
-        )}
+        <div className="flex items-center justify-between mt-2">
+          <label className="inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showCancelled}
+              onChange={(e) => {
+                setShowCancelled(e.target.checked);
+                setCurrentPage(1);
+              }}
+              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+            />
+            <span className="ml-2 text-sm text-gray-600">解約済み顧客も表示</span>
+          </label>
+          {searchTerm && (
+            <p className="text-sm text-gray-500">
+              {filteredCustomers.length}件の顧客が見つかりました
+            </p>
+          )}
+        </div>
       </div>
 
       {/* 顧客リスト */}
