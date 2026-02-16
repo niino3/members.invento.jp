@@ -28,6 +28,7 @@ export default function ServiceLogsPage() {
     limit: 50,
   });
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedKanaGroup, setSelectedKanaGroup] = useState<string>('');
   const [dateRange, setDateRange] = useState({
     start: '',
     end: '',
@@ -111,6 +112,46 @@ export default function ServiceLogsPage() {
     }
   };
 
+  const getKanaGroup = (kana: string | undefined): string => {
+    if (!kana || kana.length === 0) return 'その他';
+
+    const dakutenMap: { [key: string]: string } = {
+      'ガ': 'カ', 'ギ': 'キ', 'グ': 'ク', 'ゲ': 'ケ', 'ゴ': 'コ',
+      'ザ': 'サ', 'ジ': 'シ', 'ズ': 'ス', 'ゼ': 'セ', 'ゾ': 'ソ',
+      'ダ': 'タ', 'ヂ': 'チ', 'ヅ': 'ツ', 'デ': 'テ', 'ド': 'ト',
+      'バ': 'ハ', 'ビ': 'ヒ', 'ブ': 'フ', 'ベ': 'ヘ', 'ボ': 'ホ',
+      'パ': 'ハ', 'ピ': 'ヒ', 'プ': 'フ', 'ペ': 'ヘ', 'ポ': 'ホ',
+      'ヴ': 'ウ',
+    };
+
+    const firstChar = kana.charAt(0);
+    const seionChar = dakutenMap[firstChar] || firstChar;
+
+    if (seionChar >= 'ア' && seionChar <= 'オ') return 'ア行';
+    if (seionChar >= 'カ' && seionChar <= 'コ') return 'カ行';
+    if (seionChar >= 'サ' && seionChar <= 'ソ') return 'サ行';
+    if (seionChar >= 'タ' && seionChar <= 'ト') return 'タ行';
+    if (seionChar >= 'ナ' && seionChar <= 'ノ') return 'ナ行';
+    if (seionChar >= 'ハ' && seionChar <= 'ホ') return 'ハ行';
+    if (seionChar >= 'マ' && seionChar <= 'モ') return 'マ行';
+    if (seionChar >= 'ヤ' && seionChar <= 'ヨ') return 'ヤ行';
+    if (seionChar >= 'ラ' && seionChar <= 'ロ') return 'ラ行';
+    if (seionChar >= 'ワ' && seionChar <= 'ン') return 'ワ行';
+    if (seionChar >= 'ａ' && seionChar <= 'ｚ') return '英数字';
+    if (seionChar >= 'Ａ' && seionChar <= 'Ｚ') return '英数字';
+    if (seionChar >= 'A' && seionChar <= 'Z') return '英数字';
+    if (seionChar >= 'a' && seionChar <= 'z') return '英数字';
+    if (seionChar >= '0' && seionChar <= '9') return '英数字';
+    if (seionChar >= '０' && seionChar <= '９') return '英数字';
+    return 'その他';
+  };
+
+  const filteredCustomersByKana = selectedKanaGroup
+    ? customers
+        .filter(c => getKanaGroup(c.companyNameKana) === selectedKanaGroup)
+        .sort((a, b) => (a.companyNameKana || a.companyName).localeCompare(b.companyNameKana || b.companyName, 'ja'))
+    : customers.sort((a, b) => (a.companyNameKana || a.companyName).localeCompare(b.companyNameKana || b.companyName, 'ja'));
+
   const getCustomerName = (customerId: string) => {
     const customer = customers.find(c => c.id === customerId);
     return customer ? customer.companyName : 'Unknown';
@@ -160,18 +201,42 @@ export default function ServiceLogsPage() {
           {/* 顧客フィルター */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">顧客</label>
-            <select
-              value={filters.customerId || ''}
-              onChange={(e) => handleFilterChange('customerId', e.target.value)}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900 h-10"
-            >
-              <option value="">すべての顧客</option>
-              {customers.map((customer) => (
-                <option key={customer.id} value={customer.id}>
-                  {customer.companyName}
-                </option>
-              ))}
-            </select>
+            <div className="flex gap-2">
+              <select
+                value={selectedKanaGroup}
+                onChange={(e) => {
+                  setSelectedKanaGroup(e.target.value);
+                  handleFilterChange('customerId', '');
+                }}
+                className="rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900 h-10"
+              >
+                <option value="">全行</option>
+                <option value="ア行">ア行</option>
+                <option value="カ行">カ行</option>
+                <option value="サ行">サ行</option>
+                <option value="タ行">タ行</option>
+                <option value="ナ行">ナ行</option>
+                <option value="ハ行">ハ行</option>
+                <option value="マ行">マ行</option>
+                <option value="ヤ行">ヤ行</option>
+                <option value="ラ行">ラ行</option>
+                <option value="ワ行">ワ行</option>
+                <option value="英数字">英数字</option>
+                <option value="その他">その他</option>
+              </select>
+              <select
+                value={filters.customerId || ''}
+                onChange={(e) => handleFilterChange('customerId', e.target.value)}
+                className="flex-1 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900 h-10"
+              >
+                <option value="">すべての顧客</option>
+                {filteredCustomersByKana.map((customer) => (
+                  <option key={customer.id} value={customer.id}>
+                    {customer.companyName}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* サービスフィルター */}
