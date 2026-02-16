@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { createServiceLog } from '@/lib/firebase/serviceLogs';
-import { getCustomers } from '@/lib/firebase/customers';
+import { getAllCustomers } from '@/lib/firebase/customers';
 import { getServices } from '@/lib/firebase/services';
 import { getActiveShippingCostsOrderedByDisplay } from '@/lib/firebase/shippingCosts';
 import { Customer } from '@/types/customer';
@@ -49,8 +49,8 @@ export default function NewServiceLogPage() {
       if (!user || user.role !== 'admin') return;
 
       try {
-        const [customersResult, servicesData, shippingCostsData] = await Promise.all([
-          getCustomers(),
+        const [allCustomers, servicesData, shippingCostsData] = await Promise.all([
+          getAllCustomers(),
           getServices(),
           getActiveShippingCostsOrderedByDisplay(),
         ]);
@@ -64,7 +64,7 @@ export default function NewServiceLogPage() {
         const logEnabledServiceIds = logEnabledServices.map(s => s.id);
 
         // ログ記録が有効なサービスを契約している顧客のみフィルタリング
-        const filteredCustomers = customersResult.customers.filter(customer =>
+        const filteredCustomers = allCustomers.filter(customer =>
           customer.serviceIds.some(serviceId => logEnabledServiceIds.includes(serviceId))
         );
 

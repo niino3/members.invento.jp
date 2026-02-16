@@ -123,6 +123,24 @@ export const getCustomers = async (
   };
 };
 
+// 全顧客を取得（件数制限なし）
+export const getAllCustomers = async (): Promise<Customer[]> => {
+  const q = query(
+    collection(db, COLLECTION_NAME),
+    orderBy('companyNameKana', 'asc')
+  );
+
+  const querySnapshot = await getDocs(q);
+  const customers: Customer[] = [];
+
+  querySnapshot.forEach((doc) => {
+    const customer = convertToCustomer(doc);
+    if (customer) customers.push(customer);
+  });
+
+  return customers;
+};
+
 // 顧客を検索
 export const searchCustomers = async (searchTerm: string): Promise<Customer[]> => {
   // Firestoreでは部分一致検索が制限されているため、

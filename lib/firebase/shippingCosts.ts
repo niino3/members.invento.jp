@@ -43,8 +43,16 @@ export const createShippingCost = async (
   costData: CreateShippingCostInput,
   userId: string
 ): Promise<string> => {
+  // undefinedフィールドを除去（Firestoreはundefinedを受け付けない）
+  const cleanData: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(costData)) {
+    if (value !== undefined) {
+      cleanData[key] = value;
+    }
+  }
+
   const docRef = await addDoc(collection(db, COLLECTION_NAME), {
-    ...costData,
+    ...cleanData,
     isActive: costData.isActive !== false, // デフォルトはtrue
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
@@ -110,8 +118,16 @@ export const updateShippingCost = async (
 ): Promise<void> => {
   const docRef = doc(db, COLLECTION_NAME, costId);
 
+  // undefinedフィールドを除去（Firestoreはundefinedを受け付けない）
+  const cleanData: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(costData)) {
+    if (value !== undefined) {
+      cleanData[key] = value;
+    }
+  }
+
   await updateDoc(docRef, {
-    ...costData,
+    ...cleanData,
     updatedAt: serverTimestamp(),
     updatedBy: userId,
   });

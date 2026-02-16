@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { getServiceLogs, deleteServiceLog } from '@/lib/firebase/serviceLogs';
-import { getCustomers } from '@/lib/firebase/customers';
+import { getAllCustomers } from '@/lib/firebase/customers';
 import { getServices } from '@/lib/firebase/services';
 import { ServiceLog, ServiceLogSearchParams } from '@/types/serviceLog';
 import { Customer } from '@/types/customer';
@@ -45,14 +45,14 @@ export default function ServiceLogsPage() {
       
       try {
         // 並行してデータを取得
-        const [logsData, customersResult, servicesData] = await Promise.all([
+        const [logsData, allCustomers, servicesData] = await Promise.all([
           getServiceLogs(filters),
-          getCustomers(),
+          getAllCustomers(),
           getServices(),
         ]);
-        
+
         setLogs(logsData.logs);
-        setCustomers(customersResult.customers);
+        setCustomers(allCustomers);
         setServices(servicesData);
       } catch (error) {
         console.error('Failed to fetch data:', error);

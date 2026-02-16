@@ -5,7 +5,7 @@ import { useRouter, useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { getServiceLog, updateServiceLog } from '@/lib/firebase/serviceLogs';
-import { getCustomers } from '@/lib/firebase/customers';
+import { getAllCustomers } from '@/lib/firebase/customers';
 import { getServices } from '@/lib/firebase/services';
 import { getActiveShippingCostsOrderedByDisplay } from '@/lib/firebase/shippingCosts';
 import { Customer } from '@/types/customer';
@@ -68,13 +68,13 @@ export default function EditServiceLogPage() {
         });
 
         // 関連データを取得
-        const [customersResult, servicesData, shippingCostsData] = await Promise.all([
-          getCustomers(),
+        const [allCustomers, servicesData, shippingCostsData] = await Promise.all([
+          getAllCustomers(),
           getServices(),
           getActiveShippingCostsOrderedByDisplay(),
         ]);
-        
-        const customerData = customersResult.customers.find(c => c.id === log.customerId);
+
+        const customerData = allCustomers.find(c => c.id === log.customerId);
         const serviceData = servicesData.find(s => s.id === log.serviceId);
 
         setCustomer(customerData || null);
