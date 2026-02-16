@@ -2,26 +2,28 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { getCustomers, searchCustomers, cancelCustomer, reactivateCustomer } from '@/lib/firebase/customers';
+import { getAllCustomers, cancelCustomer, reactivateCustomer } from '@/lib/firebase/customers';
 import { Customer } from '@/types/customer';
 import { formatJSTDate } from '@/lib/utils/date';
 
 export default function CustomersPage() {
-  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [allCustomers, setAllCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isSearching, setIsSearching] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const [cancelConfirm, setCancelConfirm] = useState<Customer | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [reactivateConfirm, setReactivateConfirm] = useState<Customer | null>(null);
   const [reactivating, setReactivating] = useState(false);
 
+  const PAGE_SIZE = 20;
+
   // 顧客リストを取得
   const fetchCustomers = async () => {
     try {
       setLoading(true);
-      const { customers: fetchedCustomers } = await getCustomers(20);
-      setCustomers(fetchedCustomers);
+      const fetched = await getAllCustomers();
+      setAllCustomers(fetched);
     } catch (error) {
       console.error('Failed to fetch customers:', error);
     } finally {
@@ -29,27 +31,38 @@ export default function CustomersPage() {
     }
   };
 
-  // 検索実行
-  const handleSearch = async () => {
-    if (!searchTerm.trim()) {
-      fetchCustomers();
-      return;
-    }
-
-    try {
-      setIsSearching(true);
-      const searchResults = await searchCustomers(searchTerm);
-      setCustomers(searchResults);
-    } catch (error) {
-      console.error('Search failed:', error);
-    } finally {
-      setIsSearching(false);
-    }
-  };
-
   useEffect(() => {
     fetchCustomers();
   }, []);
+
+  // クライアントサイドでフリーワード検索
+  const filteredCustomers = searchTerm.trim()
+    ? allCustomers.filter((c) => {
+        const term = searchTerm.toLowerCase();
+        return (
+          c.companyName?.toLowerCase().includes(term) ||
+          c.companyNameKana?.toLowerCase().includes(term) ||
+          c.contactName?.toLowerCase().includes(term) ||
+          c.email?.toLowerCase().includes(term) ||
+          c.phoneNumber?.includes(term) ||
+          c.address1?.toLowerCase().includes(term) ||
+          c.notes?.toLowerCase().includes(term)
+        );
+      })
+    : allCustomers;
+
+  // ページング
+  const totalPages = Math.ceil(filteredCustomers.length / PAGE_SIZE);
+  const customers = filteredCustomers.slice(
+    (currentPage - 1) * PAGE_SIZE,
+    currentPage * PAGE_SIZE
+  );
+
+  // 検索語が変わったらページを1に戻す
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
 
 
   const getCompanyTypeLabel = (type: string) => {
@@ -131,32 +144,26 @@ export default function CustomersPage() {
           <div className="flex-1">
             <input
               type="text"
-              placeholder="会社名で検索..."
+              placeholder="会社名・担当者名・カナ・メール・電話番号で検索..."
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              onChange={(e) => handleSearchChange(e.target.value)}
               className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             />
           </div>
-          <button
-            onClick={handleSearch}
-            disabled={isSearching}
-            className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-          >
-            {isSearching ? '検索中...' : '検索'}
-          </button>
           {searchTerm && (
             <button
-              onClick={() => {
-                setSearchTerm('');
-                fetchCustomers();
-              }}
+              onClick={() => handleSearchChange('')}
               className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
             >
               クリア
             </button>
           )}
         </div>
+        {searchTerm && (
+          <p className="mt-2 text-sm text-gray-500">
+            {filteredCustomers.length}件の顧客が見つかりました
+          </p>
+        )}
       </div>
 
       {/* 顧客リスト */}
@@ -339,29 +346,63 @@ export default function CustomersPage() {
         )}
       </div>
 
-      {/* ページング（将来実装） */}
-      {customers.length >= 20 && (
+      {/* ページング */}
+      {totalPages > 1 && (
         <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6 rounded-lg shadow">
           <div className="flex-1 flex justify-between sm:hidden">
-            <button className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+            >
               前へ
             </button>
-            <button className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+            <span className="inline-flex items-center text-sm text-gray-700">
+              {currentPage} / {totalPages}
+            </span>
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50"
+            >
               次へ
             </button>
           </div>
           <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
             <div>
               <p className="text-sm text-gray-700">
-                <span className="font-medium">{customers.length}</span> 件の顧客を表示中
+                全 <span className="font-medium">{filteredCustomers.length}</span> 件中{' '}
+                <span className="font-medium">{(currentPage - 1) * PAGE_SIZE + 1}</span> -{' '}
+                <span className="font-medium">{Math.min(currentPage * PAGE_SIZE, filteredCustomers.length)}</span> 件を表示
               </p>
             </div>
             <div>
               <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px">
-                <button className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                <button
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  className="relative inline-flex items-center px-3 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                >
                   前へ
                 </button>
-                <button className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50">
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <button
+                    key={page}
+                    onClick={() => setCurrentPage(page)}
+                    className={`relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium ${
+                      page === currentPage
+                        ? 'bg-indigo-50 text-indigo-600 border-indigo-500 z-10'
+                        : 'bg-white text-gray-500 hover:bg-gray-50'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
+                <button
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="relative inline-flex items-center px-3 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50"
+                >
                   次へ
                 </button>
               </nav>
