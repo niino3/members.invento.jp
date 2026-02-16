@@ -63,8 +63,9 @@ export default function NewServiceLogPage() {
         // ログ記録が有効なサービスのIDリスト
         const logEnabledServiceIds = logEnabledServices.map(s => s.id);
 
-        // ログ記録が有効なサービスを契約している顧客のみフィルタリング
+        // ログ記録が有効なサービスを契約している有効な顧客のみフィルタリング
         const filteredCustomers = allCustomers.filter(customer =>
+          customer.contractStatus !== 'cancelled' &&
           customer.serviceIds.some(serviceId => logEnabledServiceIds.includes(serviceId))
         );
 

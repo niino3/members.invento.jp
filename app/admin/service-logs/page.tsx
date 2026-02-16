@@ -146,11 +146,13 @@ export default function ServiceLogsPage() {
     return 'その他';
   };
 
+  const activeCustomers = customers.filter(c => c.contractStatus !== 'cancelled');
+
   const filteredCustomersByKana = selectedKanaGroup
-    ? customers
+    ? activeCustomers
         .filter(c => getKanaGroup(c.companyNameKana) === selectedKanaGroup)
         .sort((a, b) => (a.companyNameKana || a.companyName).localeCompare(b.companyNameKana || b.companyName, 'ja'))
-    : customers.sort((a, b) => (a.companyNameKana || a.companyName).localeCompare(b.companyNameKana || b.companyName, 'ja'));
+    : activeCustomers.sort((a, b) => (a.companyNameKana || a.companyName).localeCompare(b.companyNameKana || b.companyName, 'ja'));
 
   const getCustomerName = (customerId: string) => {
     const customer = customers.find(c => c.id === customerId);
