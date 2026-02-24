@@ -256,10 +256,10 @@ export default function ImageUploader({
 
       {/* プレビューエリア */}
       {previews.length > 0 && (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-5">
           {previews.map((preview, index) => (
             <div key={index} className="relative">
-              <div className="aspect-w-1 aspect-h-1 w-full overflow-hidden rounded-lg bg-gray-100">
+              <div className="w-full overflow-hidden rounded bg-gray-100" style={{ aspectRatio: '1/1' }}>
                 <img
                   src={preview.url}
                   alt={`Preview ${index + 1}`}
