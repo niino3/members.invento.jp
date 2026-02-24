@@ -304,8 +304,7 @@ export default function NewServiceLogPage() {
                     })
                     .map((customer) => (
                       <option key={customer.id} value={customer.id}>
-                        {customer.companyName}
-                        {customer.companyNameKana && ` (${customer.companyNameKana})`}
+                        {customer.companyNameKana ? `(${customer.companyNameKana})${customer.companyName}` : customer.companyName}
                       </option>
                     ))}
                 </select>
