@@ -195,7 +195,7 @@ export default function NewServiceLogPage() {
 
       await createServiceLog(input, user.uid, user.displayName || user.email || 'Unknown');
 
-      router.push('/admin/service-logs');
+      router.push('/admin/service-logs/new/complete');
     } catch (error) {
       console.error('Failed to create service log:', error);
       setError('サービスログの作成に失敗しました');
@@ -312,23 +312,6 @@ export default function NewServiceLogPage() {
               </div>
             </div>
 
-            {/* サービス表示 */}
-            <div>
-              <label className="block text-base font-bold text-gray-900 mb-2">
-                サービス
-              </label>
-              <div className="block w-full rounded-md border-2 border-gray-300 bg-gray-50 px-4 py-3 text-lg text-gray-900">
-                {availableServices.length > 0
-                  ? availableServices[0].name
-                  : '（顧客を選択するとサービスが表示されます）'}
-              </div>
-              <input
-                type="hidden"
-                name="serviceId"
-                value={availableServices[0]?.id || ''}
-              />
-            </div>
-
             {/* 郵送料選択 */}
             <div>
               <label className="block text-base font-bold text-gray-900 mb-2">
@@ -349,20 +332,6 @@ export default function NewServiceLogPage() {
               </select>
             </div>
 
-            {/* 作業日時 */}
-            <div>
-              <label className="block text-base font-bold text-gray-900 mb-2">
-                作業日時 <span className="text-red-600 text-lg">*</span>
-              </label>
-              <input
-                type="datetime-local"
-                name="workDate"
-                value={formData.workDate}
-                onChange={handleInputChange}
-                required
-                className="block w-full rounded-md border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-lg text-gray-900 px-4 py-3 h-14"
-              />
-            </div>
           </div>
         </div>
 
@@ -388,9 +357,8 @@ export default function NewServiceLogPage() {
               name="comment"
               value={formData.comment}
               onChange={handleInputChange}
-              rows={8}
+              rows={1}
               className="block w-full rounded-md border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-lg text-gray-900 px-4 py-3"
-              style={{ minHeight: '180px' }}
               placeholder="作業内容を記入してください（任意）"
             />
           </div>
