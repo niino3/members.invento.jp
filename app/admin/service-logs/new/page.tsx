@@ -217,56 +217,39 @@ export default function NewServiceLogPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto space-y-4">
+    <div className="max-w-4xl mx-auto space-y-2">
       {/* ページヘッダー */}
-      <div className="bg-white shadow rounded-lg p-4">
-        <nav className="flex mb-3" aria-label="Breadcrumb">
-          <ol className="inline-flex items-center space-x-1 md:space-x-2">
-            <li>
-              <Link href="/admin/service-logs" className="text-base text-gray-500 hover:text-gray-700">
-                サービスログ管理
-              </Link>
-            </li>
-            <li>
-              <span className="text-gray-400">/</span>
-            </li>
-            <li>
-              <span className="text-base text-gray-900 font-medium">新規ログ登録</span>
-            </li>
-          </ol>
-        </nav>
-        <h1 className="text-3xl font-bold text-gray-900">新規サービスログ登録</h1>
+      <div className="bg-white shadow rounded-lg px-4 py-2">
+        <h1 className="text-2xl font-bold text-gray-900">新規サービスログ登録</h1>
       </div>
 
       {/* エラー表示 */}
       {error && (
-        <div className="bg-red-50 border-2 border-red-300 text-red-700 px-4 py-3 rounded text-base font-medium">
+        <div className="bg-red-50 border-2 border-red-300 text-red-700 px-3 py-2 rounded text-base font-medium">
           {error}
         </div>
       )}
 
       {/* フォーム */}
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-2">
         {/* 基本情報 */}
-        <div className="bg-white shadow rounded-lg p-4">
-          <h2 className="text-xl font-bold text-gray-900 mb-3">基本情報</h2>
-
-          <div className="grid grid-cols-1 gap-4">
+        <div className="bg-white shadow rounded-lg px-4 py-3">
+          <div className="grid grid-cols-1 gap-2">
             {/* 顧客選択 */}
             <div>
-              <label className="block text-base font-bold text-gray-900 mb-2">
-                顧客 <span className="text-red-600 text-lg">*</span>
+              <label className="block text-sm font-bold text-gray-900 mb-1">
+                顧客 <span className="text-red-600">*</span>
               </label>
 
               {/* カナグループ選択 */}
-              <div className="flex gap-2 mb-2">
+              <div className="flex gap-2">
                 <select
                   value={selectedKanaGroup}
                   onChange={(e) => {
                     setSelectedKanaGroup(e.target.value);
                     setFormData(prev => ({ ...prev, customerId: '' })); // 顧客選択をリセット
                   }}
-                  className="rounded-md border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-lg text-gray-900 h-14 px-3"
+                  className="rounded-md border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base text-gray-900 h-11 px-2"
                 >
                   <option value="">カナを選択</option>
                   <option value="ア行">ア行</option>
@@ -290,7 +273,7 @@ export default function NewServiceLogPage() {
                   onChange={handleInputChange}
                   required
                   disabled={!selectedKanaGroup}
-                  className="flex-1 rounded-md border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-lg text-gray-900 h-14 px-3 disabled:bg-gray-100"
+                  className="flex-1 rounded-md border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base text-gray-900 h-11 px-2 disabled:bg-gray-100"
                 >
                   <option value="">
                     {selectedKanaGroup ? '顧客を選択' : 'まずカナを選択してください'}
@@ -313,14 +296,14 @@ export default function NewServiceLogPage() {
 
             {/* 郵送料選択 */}
             <div>
-              <label className="block text-base font-bold text-gray-900 mb-2">
+              <label className="block text-sm font-bold text-gray-900 mb-1">
                 郵送料
               </label>
               <select
                 name="shippingCostId"
                 value={formData.shippingCostId}
                 onChange={handleInputChange}
-                className="block w-full rounded-md border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-lg text-gray-900 px-4 py-3 h-14"
+                className="block w-full rounded-md border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base text-gray-900 px-3 py-2 h-11"
               >
                 <option value="">郵送なし</option>
                 {shippingCosts.map((cost) => (
@@ -335,8 +318,8 @@ export default function NewServiceLogPage() {
         </div>
 
         {/* 画像アップロード */}
-        <div className="bg-white shadow rounded-lg p-4">
-          <h2 className="text-xl font-bold text-gray-900 mb-3">郵送物の撮影</h2>
+        <div className="bg-white shadow rounded-lg px-4 py-3">
+          <h2 className="text-base font-bold text-gray-900 mb-2">郵送物の撮影</h2>
           <ImageUploader
             images={images}
             onChange={handleImagesChange}
@@ -344,37 +327,33 @@ export default function NewServiceLogPage() {
           />
         </div>
 
-        {/* 作業内容 - 最下部に移動、必須を外す */}
-        <div className="bg-white shadow rounded-lg p-4">
-          <h2 className="text-xl font-bold text-gray-900 mb-3">作業内容</h2>
-
-          <div>
-            <label className="block text-base font-bold text-gray-900 mb-2">
-              コメント・作業内容
-            </label>
-            <textarea
-              name="comment"
-              value={formData.comment}
-              onChange={handleInputChange}
-              rows={1}
-              className="block w-full rounded-md border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-lg text-gray-900 px-4 py-3"
-              placeholder="作業内容を記入してください（任意）"
-            />
-          </div>
+        {/* 作業内容 */}
+        <div className="bg-white shadow rounded-lg px-4 py-3">
+          <label className="block text-sm font-bold text-gray-900 mb-1">
+            作業内容
+          </label>
+          <textarea
+            name="comment"
+            value={formData.comment}
+            onChange={handleInputChange}
+            rows={1}
+            className="block w-full rounded-md border-2 border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 text-base text-gray-900 px-3 py-2"
+            placeholder="作業内容を記入してください（任意）"
+          />
         </div>
 
         {/* アクションボタン */}
-        <div className="flex justify-end space-x-3 pb-4">
+        <div className="flex justify-end space-x-3 pb-2">
           <Link
             href="/admin/service-logs"
-            className="px-6 py-3 text-base font-bold text-gray-700 bg-white border-2 border-gray-300 rounded-md hover:bg-gray-50"
+            className="px-5 py-2 text-base font-bold text-gray-700 bg-white border-2 border-gray-300 rounded-md hover:bg-gray-50"
           >
             キャンセル
           </Link>
           <button
             type="submit"
             disabled={submitting}
-            className="px-6 py-3 text-base font-bold text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:bg-gray-400"
+            className="px-5 py-2 text-base font-bold text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:bg-gray-400"
           >
             {submitting ? '登録中...' : 'ログを登録'}
           </button>
