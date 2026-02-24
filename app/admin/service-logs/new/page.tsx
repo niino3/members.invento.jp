@@ -337,7 +337,7 @@ export default function NewServiceLogPage() {
 
         {/* 画像アップロード */}
         <div className="bg-white shadow rounded-lg p-4">
-          <h2 className="text-xl font-bold text-gray-900 mb-3">画像</h2>
+          <h2 className="text-xl font-bold text-gray-900 mb-3">郵送物の撮影</h2>
           <ImageUploader
             images={images}
             onChange={handleImagesChange}

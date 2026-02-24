@@ -229,68 +229,29 @@ export default function ImageUploader({
 
   return (
     <div className="space-y-4">
-      {/* アップロードエリア */}
-      <div
-        className={`border-2 border-dashed rounded-lg p-6 text-center ${
-          dragOver ? 'border-indigo-500 bg-indigo-50' : 'border-gray-300'
-        } ${images.length >= maxImages ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
-        onDragOver={handleDragOver}
-        onDragLeave={handleDragLeave}
-        onDrop={handleDrop}
-        onClick={() => images.length < maxImages && openFileSelect()}
-      >
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          accept="image/*"
-          onChange={handleFileInputChange}
-          className="hidden"
-          disabled={images.length >= maxImages}
-        />
-        
-        <div className="space-y-1">
-          <div className="text-3xl">📷</div>
-          <p className="text-sm text-gray-600">
-            ドラッグ＆ドロップまたはクリックして画像を選択
-          </p>
-          <p className="text-xs text-gray-500">
-            最大{maxImages}枚、各{maxSizeInMB}MBまで
-          </p>
-        </div>
-      </div>
+      <input
+        ref={fileInputRef}
+        type="file"
+        multiple
+        accept="image/*"
+        onChange={handleFileInputChange}
+        className="hidden"
+        disabled={images.length >= maxImages}
+      />
 
       {/* カメラボタン */}
-      <div className="flex justify-center space-x-2 flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              startCamera();
-            }}
-            disabled={images.length >= maxImages}
-            className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            📸 {supportsCameraAPI ? 'カメラで撮影' : '写真を選択'}
-          </button>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.preventDefault();
-              openFileSelect();
-            }}
-            disabled={images.length >= maxImages}
-            className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            📁 ファイルから選択
-          </button>
-        </div>
-      
-      {/* 診断情報（開発用） */}
-      <div className="text-xs text-gray-500 text-center">
-        モバイル: {isMobile ? '✓' : '✗'} | 
-        カメラAPI: {supportsCameraAPI ? '✓' : '✗'} | 
-        HTTPS: {typeof window !== 'undefined' && window.location.protocol === 'https:' ? '✓' : '✗'}
+      <div className="flex justify-center">
+        <button
+          type="button"
+          onClick={(e) => {
+            e.preventDefault();
+            startCamera();
+          }}
+          disabled={images.length >= maxImages}
+          className="inline-flex items-center px-6 py-3 text-base font-bold text-gray-700 bg-white border-2 border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          📸 {supportsCameraAPI ? 'カメラで撮影' : '写真を選択'}
+        </button>
       </div>
 
       {/* プレビューエリア */}
@@ -337,7 +298,7 @@ export default function ImageUploader({
                 ✕
               </button>
             </div>
-            
+
             <div className="relative">
               <video
                 ref={videoRef}
@@ -351,7 +312,7 @@ export default function ImageUploader({
                 className="hidden"
               />
             </div>
-            
+
             <div className="flex justify-center space-x-4 mt-4">
               <button
                 type="button"
@@ -371,11 +332,6 @@ export default function ImageUploader({
           </div>
         </div>
       )}
-
-      {/* 残り枚数表示 */}
-      <p className="text-sm text-gray-500 text-center">
-        {images.length}/{maxImages} 枚選択済み
-      </p>
     </div>
   );
 }
