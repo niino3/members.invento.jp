@@ -343,12 +343,6 @@ export default function ServiceLogsPage() {
                     顧客
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    サービス
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    作業者
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     画像
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -366,20 +360,26 @@ export default function ServiceLogsPage() {
                       {formatJSTDate(log.workDate)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {getCustomerName(log.customerId)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {getServiceName(log.serviceId)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {log.workerName}
+                      {log.images.length > 0 ? (
+                        <button
+                          onClick={() => setSelectedLogImages({
+                            images: log.images,
+                            logInfo: `${getCustomerName(log.customerId)} - ${formatJSTDate(log.workDate)}`
+                          })}
+                          className="text-indigo-600 hover:text-indigo-900 hover:underline font-medium"
+                        >
+                          {getCustomerName(log.customerId)}
+                        </button>
+                      ) : (
+                        getCustomerName(log.customerId)
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {log.images.length > 0 ? (
                         <button
-                          onClick={() => setSelectedLogImages({ 
-                            images: log.images, 
-                            logInfo: `${getCustomerName(log.customerId)} - ${formatJSTDate(log.workDate)}` 
+                          onClick={() => setSelectedLogImages({
+                            images: log.images,
+                            logInfo: `${getCustomerName(log.customerId)} - ${formatJSTDate(log.workDate)}`
                           })}
                           className="flex space-x-1 hover:bg-gray-50 p-1 rounded transition-colors"
                         >
