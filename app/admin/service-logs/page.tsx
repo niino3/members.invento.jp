@@ -241,23 +241,6 @@ export default function ServiceLogsPage() {
             </div>
           </div>
 
-          {/* サービスフィルター */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">サービス</label>
-            <select
-              value={filters.serviceId || ''}
-              onChange={(e) => handleFilterChange('serviceId', e.target.value)}
-              className="block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-900 h-10"
-            >
-              <option value="">すべてのサービス</option>
-              {services.map((service) => (
-                <option key={service.id} value={service.id}>
-                  {service.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
           {/* ステータスフィルター */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">ステータス</label>
