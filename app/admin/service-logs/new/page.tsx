@@ -308,7 +308,7 @@ export default function NewServiceLogPage() {
                 <option value="">郵送なし</option>
                 {shippingCosts.map((cost) => (
                   <option key={cost.id} value={cost.id}>
-                    {cost.name} - ¥{cost.price.toLocaleString('ja-JP')}
+                    ¥{cost.price.toLocaleString('ja-JP')} - {cost.name}
                   </option>
                 ))}
               </select>
@@ -343,7 +343,7 @@ export default function NewServiceLogPage() {
         </div>
 
         {/* アクションボタン */}
-        <div className="flex justify-end space-x-3 pb-2">
+        <div className="flex justify-start space-x-3 pb-2">
           <Link
             href="/admin/service-logs"
             className="px-5 py-2 text-base font-bold text-gray-700 bg-white border-2 border-gray-300 rounded-md hover:bg-gray-50"
