@@ -4,7 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
-import { getServiceLogs, deleteServiceLog } from '@/lib/firebase/serviceLogs';
+import { getServiceLogs, deleteServiceLog, cleanupOldServiceLogs } from '@/lib/firebase/serviceLogs';
+import { generateLastMonthShippingSummary } from '@/lib/firebase/monthlyShippingSummary';
 import { getAllCustomers } from '@/lib/firebase/customers';
 import { getServices } from '@/lib/firebase/services';
 import { ServiceLog, ServiceLogSearchParams } from '@/types/serviceLog';
@@ -55,6 +56,16 @@ export default function ServiceLogsPage() {
         setLogs(logsData.logs);
         setCustomers(allCustomers);
         setServices(servicesData);
+
+        // バックグラウンドで自動処理
+        // 1. 1年以上前のログを自動削除
+        cleanupOldServiceLogs().then((count) => {
+          if (count > 0) {
+            getServiceLogs(filters).then((refreshed) => setLogs(refreshed.logs));
+          }
+        });
+        // 2. 前月の月次郵送料サマリーを自動生成
+        generateLastMonthShippingSummary();
       } catch (error) {
         console.error('Failed to fetch data:', error);
       } finally {

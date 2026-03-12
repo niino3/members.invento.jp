@@ -287,25 +287,25 @@ export default function ImageUploader({
       {/* カメラモーダル */}
       {showCamera && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-4 max-w-lg w-full mx-4">
-            <div className="flex justify-between items-center mb-4">
+          <div className="bg-white rounded-lg p-4 w-full h-full max-w-none m-0 sm:max-w-4xl sm:h-auto sm:m-4 sm:rounded-lg flex flex-col">
+            <div className="flex justify-between items-center mb-3">
               <h3 className="text-lg font-medium">カメラで撮影</h3>
               <button
                 type="button"
                 onClick={stopCamera}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-400 hover:text-gray-600 p-2"
               >
                 ✕
               </button>
             </div>
 
-            <div className="relative">
+            <div className="relative flex-1 min-h-0">
               <video
                 ref={videoRef}
                 autoPlay
                 muted
                 playsInline
-                className="w-full h-64 bg-black rounded"
+                className="w-full h-full bg-black rounded object-contain sm:max-h-[70vh]"
               />
               <canvas
                 ref={canvasRef}
@@ -313,18 +313,18 @@ export default function ImageUploader({
               />
             </div>
 
-            <div className="flex justify-center space-x-4 mt-4">
+            <div className="flex justify-center space-x-4 mt-4 pb-2">
               <button
                 type="button"
                 onClick={stopCamera}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300"
+                className="px-6 py-3 text-base font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300"
               >
                 キャンセル
               </button>
               <button
                 type="button"
                 onClick={capturePhoto}
-                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
+                className="px-6 py-3 text-base font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
               >
                 📸 撮影
               </button>

@@ -358,6 +358,53 @@ export async function deleteServiceLog(id: string): Promise<void> {
   }
 }
 
+// 1年以上前のサービスログを自動削除
+export async function cleanupOldServiceLogs(): Promise<number> {
+  try {
+    const cutoffDate = new Date();
+    cutoffDate.setFullYear(cutoffDate.getFullYear() - 1);
+
+    const q = query(
+      collection(db, COLLECTION_NAME),
+      where('workDate', '<', Timestamp.fromDate(cutoffDate))
+    );
+
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) return 0;
+
+    let deletedCount = 0;
+    for (const docSnap of snapshot.docs) {
+      const data = docSnap.data() as ServiceLogFirestore;
+
+      // Storage から画像を削除
+      if (data.images && data.images.length > 0) {
+        for (const image of data.images) {
+          try {
+            const imagePath = `${STORAGE_PATH}/${docSnap.id}/${image.filename}`;
+            const imageRef = ref(storage, imagePath);
+            await deleteObject(imageRef);
+          } catch {
+            // 画像が既に存在しない場合は無視
+          }
+        }
+      }
+
+      // ドキュメントを削除
+      await deleteDoc(docSnap.ref);
+      deletedCount++;
+    }
+
+    if (deletedCount > 0) {
+      console.log(`古いサービスログ ${deletedCount} 件を自動削除しました`);
+    }
+
+    return deletedCount;
+  } catch (error) {
+    console.error('古いサービスログの削除に失敗:', error);
+    return 0;
+  }
+}
+
 // 顧客のサービスログを取得
 export async function getServiceLogsByCustomer(
   customerId: string,

@@ -12,13 +12,7 @@ export default function ServiceLogCompletePage() {
           </svg>
         </div>
         <h1 className="text-2xl font-bold text-gray-900">サービスログを登録しました</h1>
-        <div className="flex justify-center gap-4">
-          <Link
-            href="/admin/service-logs"
-            className="px-6 py-3 text-base font-bold text-gray-700 bg-white border-2 border-gray-300 rounded-md hover:bg-gray-50"
-          >
-            一覧に戻る
-          </Link>
+        <div className="flex justify-center">
           <Link
             href="/admin/service-logs/new"
             className="px-6 py-3 text-base font-bold text-white bg-indigo-600 rounded-md hover:bg-indigo-700"
