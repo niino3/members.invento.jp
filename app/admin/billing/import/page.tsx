@@ -132,15 +132,27 @@ export default function BillingImportPage() {
 
     setSaving(true);
     setError('');
+    let successCount = 0;
+    let failCount = 0;
     try {
-      const response = await fetch('/api/moneyforward/import', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mappings: validMappings }),
-      });
-      if (!response.ok) throw new Error('Failed to save');
-      const data = await response.json();
-      setMessage(`${data.updated}件のマッピングを保存しました`);
+      for (const mapping of validMappings) {
+        try {
+          const response = await fetch('/api/moneyforward/import', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mappings: [mapping] }),
+          });
+          if (response.ok) {
+            successCount++;
+            setMessage(`保存中... ${successCount}/${validMappings.length}件`);
+          } else {
+            failCount++;
+          }
+        } catch {
+          failCount++;
+        }
+      }
+      setMessage(`${successCount}件保存成功${failCount > 0 ? `、${failCount}件失敗` : ''}`);
     } catch (err) {
       setError('マッピングの保存に失敗しました');
     } finally {
