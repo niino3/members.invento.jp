@@ -25,27 +25,24 @@ async function rateLimit() {
 
 async function getFirebaseAdmin() {
   const admin = await import('firebase-admin');
-  if (!admin.apps.length) {
-    let privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY || '';
-    // Vercel等で JSON文字列として保存されている場合のパース
-    if (privateKey.startsWith('"')) {
-      try {
-        privateKey = JSON.parse(privateKey);
-      } catch {
-        // パース失敗時はそのまま使用
-      }
-    }
-    privateKey = privateKey.replace(/\\n/g, '\n');
+  if (!admin.default.apps.length) {
+    const privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n');
+    const clientEmail = process.env.FIREBASE_ADMIN_CLIENT_EMAIL;
+    const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
 
-    admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+    if (!privateKey || !clientEmail || !projectId) {
+      throw new Error('Firebase Admin SDK環境変数が設定されていません');
+    }
+
+    admin.default.initializeApp({
+      credential: admin.default.credential.cert({
+        projectId,
+        clientEmail,
         privateKey,
-        clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
       }),
     });
   }
-  return admin;
+  return admin.default;
 }
 
 // --- トークン管理 ---
