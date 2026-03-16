@@ -7,9 +7,9 @@ import { mfApiRequest } from '@/lib/moneyforward';
 export async function GET() {
   try {
     const admin = await import('firebase-admin');
-    if (!admin.apps.length) {
-      admin.initializeApp({
-        credential: admin.credential.cert({
+    if (!admin.default.apps.length) {
+      admin.default.initializeApp({
+        credential: admin.default.credential.cert({
           projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
           privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n'),
           clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
@@ -17,7 +17,7 @@ export async function GET() {
       });
     }
 
-    const db = admin.firestore();
+    const db = admin.default.firestore();
 
     // 1. MF 取引先一覧を取得（ページネーション対応）
     let allPartners: any[] = [];
@@ -106,9 +106,9 @@ export async function POST(request: NextRequest) {
     }
 
     const admin = await import('firebase-admin');
-    if (!admin.apps.length) {
-      admin.initializeApp({
-        credential: admin.credential.cert({
+    if (!admin.default.apps.length) {
+      admin.default.initializeApp({
+        credential: admin.default.credential.cert({
           projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
           privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n'),
           clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const db = admin.firestore();
+    const db = admin.default.firestore();
     let updatedCount = 0;
 
     for (const mapping of mappings) {
@@ -136,7 +136,7 @@ export async function POST(request: NextRequest) {
         'mfBilling.items': existingMfBilling.items || [],
         'mfBilling.variable': existingMfBilling.variable || false,
         'mfBilling.notes': existingMfBilling.notes || '',
-        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.default.firestore.FieldValue.serverTimestamp(),
       });
 
       updatedCount++;

@@ -9,9 +9,9 @@ export async function POST(request: NextRequest) {
     }
 
     const admin = await import('firebase-admin');
-    if (!admin.apps.length) {
-      admin.initializeApp({
-        credential: admin.credential.cert({
+    if (!admin.default.apps.length) {
+      admin.default.initializeApp({
+        credential: admin.default.credential.cert({
           projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
           privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n'),
           clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const db = admin.firestore();
+    const db = admin.default.firestore();
 
     const results: {
       billingId: string;
@@ -73,9 +73,9 @@ export async function POST(request: NextRequest) {
 
         // sentAt を記録
         await db.collection('billing').doc(billingId).update({
-          sentAt: admin.firestore.FieldValue.serverTimestamp(),
+          sentAt: admin.default.firestore.FieldValue.serverTimestamp(),
           status: 'pending', // 送信済み（未入金）
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.default.firestore.FieldValue.serverTimestamp(),
         });
 
         results.push({

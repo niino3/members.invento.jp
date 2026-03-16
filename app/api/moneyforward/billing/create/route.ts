@@ -9,9 +9,9 @@ export async function POST(request: NextRequest) {
     }
 
     const admin = await import('firebase-admin');
-    if (!admin.apps.length) {
-      admin.initializeApp({
-        credential: admin.credential.cert({
+    if (!admin.default.apps.length) {
+      admin.default.initializeApp({
+        credential: admin.default.credential.cert({
           projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
           privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n'),
           clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const db = admin.firestore();
+    const db = admin.default.firestore();
 
     // 対象顧客を取得
     const customersSnapshot = await db.collection('customers').get();
@@ -130,15 +130,15 @@ export async function POST(request: NextRequest) {
           customerName: data.companyName,
           amount: totalAmount,
           currency: 'JPY',
-          billingDate: admin.firestore.Timestamp.fromDate(new Date(billingDate)),
-          dueDate: admin.firestore.Timestamp.fromDate(new Date(dueDate)),
+          billingDate: admin.default.firestore.Timestamp.fromDate(new Date(billingDate)),
+          dueDate: admin.default.firestore.Timestamp.fromDate(new Date(dueDate)),
           status: 'pending',
           paymentMethod: data.paymentMethod || 'other',
           targetMonth: month,
           mfBillingId: mfBillingId,
           notes: data.mfBilling.notes || '',
-          createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+          createdAt: admin.default.firestore.FieldValue.serverTimestamp(),
+          updatedAt: admin.default.firestore.FieldValue.serverTimestamp(),
         });
 
         results.push({
