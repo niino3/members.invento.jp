@@ -21,6 +21,33 @@ async function rateLimit() {
   lastRequestTime = Date.now();
 }
 
+// --- Firebase Admin 初期化 ---
+
+async function getFirebaseAdmin() {
+  const admin = await import('firebase-admin');
+  if (!admin.apps.length) {
+    let privateKey = process.env.FIREBASE_ADMIN_PRIVATE_KEY || '';
+    // Vercel等で JSON文字列として保存されている場合のパース
+    if (privateKey.startsWith('"')) {
+      try {
+        privateKey = JSON.parse(privateKey);
+      } catch {
+        // パース失敗時はそのまま使用
+      }
+    }
+    privateKey = privateKey.replace(/\\n/g, '\n');
+
+    admin.initializeApp({
+      credential: admin.credential.cert({
+        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+        privateKey,
+        clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
+      }),
+    });
+  }
+  return admin;
+}
+
 // --- トークン管理 ---
 
 interface MFToken {
@@ -33,17 +60,7 @@ interface MFToken {
  * Firestore からトークンを取得
  */
 export async function getMFToken(): Promise<MFToken | null> {
-  const admin = await import('firebase-admin');
-  if (!admin.apps.length) {
-    admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-        privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-        clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
-      }),
-    });
-  }
-
+  const admin = await getFirebaseAdmin();
   const db = admin.firestore();
   const doc = await db.collection('settings').doc('moneyforward').get();
 
@@ -61,17 +78,7 @@ export async function getMFToken(): Promise<MFToken | null> {
  * Firestore にトークンを保存
  */
 export async function saveMFToken(token: MFToken): Promise<void> {
-  const admin = await import('firebase-admin');
-  if (!admin.apps.length) {
-    admin.initializeApp({
-      credential: admin.credential.cert({
-        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-        privateKey: process.env.FIREBASE_ADMIN_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-        clientEmail: process.env.FIREBASE_ADMIN_CLIENT_EMAIL,
-      }),
-    });
-  }
-
+  const admin = await getFirebaseAdmin();
   const db = admin.firestore();
   await db.collection('settings').doc('moneyforward').set({
     accessToken: token.accessToken,
