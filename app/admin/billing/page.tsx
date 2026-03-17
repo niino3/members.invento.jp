@@ -110,13 +110,23 @@ export default function BillingPage() {
           customerIds: Array.from(selectedIds),
         }),
       });
-      if (!response.ok) throw new Error('Failed to create billings');
       const data = await response.json();
+      if (!response.ok) {
+        setError(`作成失敗: ${data.error || JSON.stringify(data)}`);
+        return;
+      }
+      // 結果詳細をメッセージに表示
+      const details = (data.results || [])
+        .map((r: any) => `${r.customerName}: ${r.success ? '成功' : '失敗'} ${r.error || ''} [件名: ${r.resolvedTitle || '-'}]`)
+        .join('\n');
       setMessage(`${data.success}件作成成功、${data.failed}件失敗`);
-      // プレビューを再取得
+      if (data.failed > 0) {
+        setError(details);
+      }
+      console.log('Create results:', data.results);
       await fetchPreview();
     } catch (err) {
-      setError('請求書の作成に失敗しました');
+      setError(`請求書の作成に失敗しました: ${err}`);
       console.error(err);
     } finally {
       setProcessing(false);

@@ -72,6 +72,7 @@ export async function POST(request: NextRequest) {
       success: boolean;
       mfBillingId?: string;
       error?: string;
+      resolvedTitle?: string;
     }[] = [];
 
     for (const doc of customersSnapshot.docs) {
@@ -127,13 +128,13 @@ export async function POST(request: NextRequest) {
         continue;
       }
 
-      try {
-        // MF API で請求書作成
-        const billingScope = data.mfBilling.billingScope || 'current';
+      // タイトルテンプレート変数を展開
+      const billingScope = data.mfBilling.billingScope || 'current';
+      const titleTemplate = data.mfBilling.title || '{{YYYY}}年{{M}}月分 Webサイト保守管理費';
+      const resolvedTitle = resolveTitleTemplate(titleTemplate, year, targetMonth, nextYear, nextMonth);
+      console.log('Title debug:', { titleTemplate, resolvedTitle, year, targetMonth });
 
-        // タイトルテンプレート変数を展開
-        const titleTemplate = data.mfBilling.title || '{{YYYY}}年{{M}}月分 Webサイト保守管理費';
-        const resolvedTitle = resolveTitleTemplate(titleTemplate, year, targetMonth, nextYear, nextMonth);
+      try {
 
         const mfResult = await mfCreateBilling({
           department_id: data.mfBilling.departmentId,
@@ -178,6 +179,7 @@ export async function POST(request: NextRequest) {
           customerName: data.companyName,
           success: true,
           mfBillingId: mfBillingId,
+          resolvedTitle,
         });
       } catch (err) {
         console.error(`Failed to create billing for ${data.companyName}:`, err);
@@ -186,6 +188,7 @@ export async function POST(request: NextRequest) {
           customerName: data.companyName,
           success: false,
           error: String(err),
+          resolvedTitle,
         });
       }
     }
