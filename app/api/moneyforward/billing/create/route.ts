@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
           paymentMethod: data.paymentMethod || 'other',
           targetMonth: month,
           mfBillingId: mfBillingId,
-          notes: data.mfBilling.notes || '',
+          notes: resolveTitleTemplate(data.mfBilling.notes || '', year, targetMonth, nextYear, nextMonth),
           createdAt: admin.default.firestore.FieldValue.serverTimestamp(),
           updatedAt: admin.default.firestore.FieldValue.serverTimestamp(),
         });

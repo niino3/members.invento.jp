@@ -34,6 +34,8 @@ interface BillingRecord {
   billingDate: string;
   dueDate: string;
   title: string;
+  memo: string;
+  note: string;
   totalAmount: number;
   status: string;
   departmentId: string;
@@ -321,9 +323,7 @@ export default function BillingImportPage() {
           schedule: analysis.suggestedSchedule,
           billingScope: 'current',
           variable: analysis.analysis?.isVariable || false,
-          notes: analysis.analysis?.isVariable
-            ? `金額変動あり (${(analysis.analysis?.uniqueAmounts || []).map(a => '¥' + a.toLocaleString()).join(', ')})`
-            : '',
+          notes: buildNotes(analysis),
         }),
       });
       if (!response.ok) throw new Error('Failed to save');
@@ -346,15 +346,45 @@ export default function BillingImportPage() {
     setMessage(`${targets.length}件の請求情報を保存しました`);
   };
 
-  // 最新の請求書タイトルから年月部分を除去して件名を抽出
+  // 最新の請求書タイトルからテンプレート変数形式に変換
   const extractTitle = (billings: BillingRecord[]): string => {
     if (billings.length === 0) return '';
-    const latestTitle = billings[0].title || '';
-    // 「2026年4月分 」「2026年04月分」「2026/4 」等のパターンを除去
+    const latestTitle = (billings[0].title || '').trim();
+    if (!latestTitle) return '';
+
+    // 日付パターンをテンプレート変数に置換
     return latestTitle
-      .replace(/\d{4}年\d{1,2}月分\s*/g, '')
-      .replace(/\d{4}\/\d{1,2}\s*/g, '')
+      // (2025年8月分) → ({{YYYY}}年{{M}}月分)
+      .replace(/\d{4}年\d{1,2}月分/g, '{{YYYY}}年{{M}}月分')
+      // (2025年8月) → ({{YYYY}}年{{M}}月)
+      .replace(/\d{4}年\d{1,2}月/g, '{{YYYY}}年{{M}}月')
+      // (2025/08) (2025/8) → ({{YYYY}}/{{MM}})
+      .replace(/\d{4}\/\d{2}(?=\)|\s|$|-)/g, '{{YYYY}}/{{MM}}')
+      .replace(/\d{4}\/\d{1}(?=\)|\s|$|-)/g, '{{YYYY}}/{{M}}')
+      // 2025年07月分 → {{YYYY}}年{{MM}}月分 (ゼロ埋め)
+      .replace(/\d{4}年\d{2}月分/g, '{{YYYY}}年{{MM}}月分')
+      // 2025年7月 → {{YYYY}}年{{M}}月
+      .replace(/\d{4}年\d{1,2}月/g, '{{YYYY}}年{{M}}月')
       .trim();
+  };
+
+  // MFの備考（memo/note）を取得して組み立て
+  const buildNotes = (analysis: BillingAnalysis): string => {
+    const parts: string[] = [];
+
+    // MFの最新請求書からmemo/noteを取得
+    if (analysis.billings.length > 0) {
+      const latest = analysis.billings[0];
+      if (latest.memo) parts.push(latest.memo);
+      if (latest.note) parts.push(latest.note);
+    }
+
+    // 金額変動情報
+    if (analysis.analysis?.isVariable) {
+      parts.push(`金額変動あり (${(analysis.analysis?.uniqueAmounts || []).map(a => '¥' + a.toLocaleString()).join(', ')})`);
+    }
+
+    return parts.join(' / ');
   };
 
   const getScheduleLabel = (schedule: { type: string; months: number[] }) => {

@@ -41,6 +41,8 @@ export async function GET(request: NextRequest) {
         billingDate: attrs.billing_date || '',
         dueDate: attrs.due_date || '',
         title,
+        memo: attrs.memo || '',
+        note: attrs.note || '',
         totalAmount: attrs.total_price || 0,
         status: attrs.status || '',
         departmentId: attrs.department_id || '',
