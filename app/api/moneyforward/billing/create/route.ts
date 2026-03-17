@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
           billing_date: billingDate,
           due_date: dueDate,
           sales_date: salesDate,
-          title: `${titleMonth} Webサイト保守管理費`,
+          title: `${titleMonth} ${data.mfBilling.title || 'Webサイト保守管理費'}`,
           items: data.mfBilling.items.map((item: { name: string; price: number; quantity: number; excise: string }) => ({
             name: item.name,
             price: item.price,

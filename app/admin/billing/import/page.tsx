@@ -310,6 +310,7 @@ export default function BillingImportPage() {
         body: JSON.stringify({
           customerId: analysis.customerId,
           departmentId: analysis.departmentId,
+          title: extractTitle(analysis.billings),
           items: analysis.suggestedItems,
           schedule: analysis.suggestedSchedule,
           billingScope: 'current',
@@ -337,6 +338,17 @@ export default function BillingImportPage() {
       await saveBillingInfo(analysis);
     }
     setMessage(`${targets.length}件の請求情報を保存しました`);
+  };
+
+  // 最新の請求書タイトルから年月部分を除去して件名を抽出
+  const extractTitle = (billings: BillingRecord[]): string => {
+    if (billings.length === 0) return '';
+    const latestTitle = billings[0].title || '';
+    // 「2026年4月分 」「2026年04月分」「2026/4 」等のパターンを除去
+    return latestTitle
+      .replace(/\d{4}年\d{1,2}月分\s*/g, '')
+      .replace(/\d{4}\/\d{1,2}\s*/g, '')
+      .trim();
   };
 
   const getScheduleLabel = (schedule: { type: string; months: number[] }) => {

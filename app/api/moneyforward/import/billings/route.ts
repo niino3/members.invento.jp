@@ -59,7 +59,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const { customerId, departmentId, items, schedule, billingScope, variable, notes } = await request.json();
+    const { customerId, departmentId, title, items, schedule, billingScope, variable, notes } = await request.json();
 
     if (!customerId || !departmentId) {
       return NextResponse.json({ error: 'customerId and departmentId required' }, { status: 400 });
@@ -81,6 +81,7 @@ export async function POST(request: NextRequest) {
     await db.collection('customers').doc(customerId).update({
       mfBilling: {
         departmentId,
+        title: title || '',
         schedule: schedule || { type: 'monthly', months: [] },
         billingScope: billingScope || 'current',
         items: items || [],

@@ -14,6 +14,7 @@ interface BillingItem {
 
 interface MfBilling {
   departmentId: string;
+  title: string;
   schedule: { type: string; months: number[] };
   billingScope: string;
   items: BillingItem[];
@@ -226,6 +227,9 @@ export default function BillingCustomersPage() {
               <div className="flex justify-between items-start">
                 <div>
                   <h3 className="font-medium text-gray-900">{customer.companyName}</h3>
+                  {billing.title && (
+                    <p className="text-sm text-gray-600 mt-0.5">{billing.title}</p>
+                  )}
                   <div className="flex gap-3 mt-1 text-sm text-gray-500">
                     <span>{getScheduleLabel(billing.schedule)}</span>
                     <span>¥{getTotalAmount(billing.items).toLocaleString()}</span>
@@ -259,6 +263,19 @@ export default function BillingCustomersPage() {
               {/* 編集フォーム */}
               {isEditing && editData && (
                 <div className="mt-4 space-y-4 border-t pt-4">
+                  {/* 件名 */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">件名</label>
+                    <input
+                      type="text"
+                      value={editData.title || ''}
+                      onChange={(e) => setEditData({ ...editData, title: e.target.value })}
+                      placeholder="例: Webサイト保守管理費"
+                      className="w-full rounded border-gray-300 text-sm text-gray-900 h-9 px-2"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">※ 請求書作成時「YYYY年M月分 {'{件名}'}」の形式で使用されます</p>
+                  </div>
+
                   {/* スケジュール */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div>
