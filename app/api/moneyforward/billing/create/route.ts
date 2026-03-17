@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
       }
       if (!isTarget) continue;
 
-      // 既に作成済みかチェック
+      // 既に作成済みかチェック（送信済みはスキップ、未送信は再作成可能）
       const existingBilling = await db
         .collection('billing')
         .where('customerId', '==', doc.id)
@@ -105,15 +105,20 @@ export async function POST(request: NextRequest) {
 
       if (!existingBilling.empty) {
         const existingData = existingBilling.docs[0].data();
-        if (existingData.mfBillingId) {
+        if (existingData.sentAt) {
+          // 送信済みは再作成しない
           results.push({
             customerId: doc.id,
             customerName: data.companyName,
             success: true,
             mfBillingId: existingData.mfBillingId,
-            error: 'Already created',
+            error: 'Already sent',
           });
           continue;
+        }
+        // 未送信の既存レコードは削除して再作成
+        for (const existingDoc of existingBilling.docs) {
+          await existingDoc.ref.delete();
         }
       }
 
