@@ -214,6 +214,12 @@ export default function BillingImportPage() {
 
         allBillings = allBillings.concat(billData.billings);
         hasMore = billData.hasMore;
+
+        // 最初のページでMF APIのフィールド名を表示
+        if (page === 1 && billData.debug?.sampleKeys) {
+          console.log('MF billing fields:', billData.debug.sampleKeys);
+        }
+
         page++;
 
         // 安全策: 最大20ページ
@@ -656,6 +662,7 @@ export default function BillingImportPage() {
                   <thead className="bg-gray-50">
                     <tr>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">顧客名</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">件名</th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">スケジュール</th>
                       <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">金額</th>
                       <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">品目</th>
@@ -667,6 +674,9 @@ export default function BillingImportPage() {
                     {fixedCustomers.map((a) => (
                       <tr key={a.departmentId}>
                         <td className="px-4 py-2 font-medium text-gray-900">{a.customerName}</td>
+                        <td className="px-4 py-2 text-gray-600 text-xs">
+                          {extractTitle(a.billings) || <span className="text-gray-400">-</span>}
+                        </td>
                         <td className="px-4 py-2 text-gray-600">{getScheduleLabel(a.suggestedSchedule)}</td>
                         <td className="px-4 py-2 text-right font-medium">¥{a.analysis.latestAmount.toLocaleString()}</td>
                         <td className="px-4 py-2 text-gray-600 text-xs">

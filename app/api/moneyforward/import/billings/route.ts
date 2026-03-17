@@ -18,14 +18,29 @@ export async function GET(request: NextRequest) {
     const data = await response.json();
     const billings = data.data || data;
 
+    // デバッグ: 最初の1件の生データキーを記録
+    if (Array.isArray(billings) && billings.length > 0) {
+      const sample = billings[0];
+      const sampleAttrs = sample.attributes || sample;
+      console.log('MF billing sample keys:', Object.keys(sampleAttrs));
+      console.log('MF billing sample title-related:', {
+        title: sampleAttrs.title,
+        subject: sampleAttrs.subject,
+        billing_title: sampleAttrs.billing_title,
+        document_name: sampleAttrs.document_name,
+      });
+    }
+
     // 請求書データを整形
     const parsed = (Array.isArray(billings) ? billings : []).map((b: any) => {
       const attrs = b.attributes || b;
+      // title のフィールド名候補を順に試す
+      const title = attrs.title || attrs.subject || attrs.document_name || attrs.billing_title || '';
       return {
         id: b.id || attrs.id,
         billingDate: attrs.billing_date || '',
         dueDate: attrs.due_date || '',
-        title: attrs.title || '',
+        title,
         totalAmount: attrs.total_price || 0,
         status: attrs.status || '',
         departmentId: attrs.department_id || '',
@@ -39,11 +54,19 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    // デバッグ: 最初の請求書の属性キー一覧
+    let debugKeys: string[] = [];
+    if (Array.isArray(billings) && billings.length > 0) {
+      const sampleAttrs = billings[0].attributes || billings[0];
+      debugKeys = Object.keys(sampleAttrs);
+    }
+
     return NextResponse.json({
       page: parseInt(page),
       count: parsed.length,
       hasMore: parsed.length >= 100,
       billings: parsed,
+      debug: { sampleKeys: debugKeys },
     });
   } catch (err) {
     console.error('Billing fetch error:', err);
