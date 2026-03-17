@@ -20,6 +20,7 @@ interface MfBilling {
   items: BillingItem[];
   variable: boolean;
   notes: string;
+  paymentCondition: string;
 }
 
 interface BillingCustomer {
@@ -388,9 +389,21 @@ export default function BillingCustomersPage() {
                         value={editData.notes}
                         onChange={(e) => setEditData({ ...editData, notes: e.target.value })}
                         className="w-full rounded border-gray-300 text-sm text-gray-900 h-9 px-2"
-                        placeholder="メモ"
+                        placeholder="メモ（テンプレート変数使用可）"
                       />
                     </div>
+                  </div>
+
+                  {/* 振込先 */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">振込先</label>
+                    <textarea
+                      value={editData.paymentCondition || ''}
+                      onChange={(e) => setEditData({ ...editData, paymentCondition: e.target.value })}
+                      rows={3}
+                      className="w-full rounded border-gray-300 text-sm text-gray-900 px-2 py-1"
+                      placeholder="振込先口座情報（テンプレート変数使用可）"
+                    />
                   </div>
 
                   <div className="text-xs text-gray-400">
@@ -411,6 +424,11 @@ export default function BillingCustomersPage() {
                   {billing.notes && (
                     <span className="ml-2 text-gray-400">({billing.notes})</span>
                   )}
+                </div>
+              )}
+              {!isEditing && billing.paymentCondition && (
+                <div className="mt-1 text-xs text-gray-400 whitespace-pre-line">
+                  振込先: {billing.paymentCondition}
                 </div>
               )}
             </div>

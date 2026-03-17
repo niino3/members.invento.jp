@@ -250,6 +250,8 @@ export async function createBilling(billingData: {
   due_date: string;
   sales_date: string;
   title: string;
+  payment_condition?: string;
+  note?: string;
   items: {
     name: string;
     price: number;
@@ -257,9 +259,15 @@ export async function createBilling(billingData: {
     excise: string;
   }[];
 }) {
+  // undefined のフィールドを除去
+  const cleanData: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(billingData)) {
+    if (value !== undefined) cleanData[key] = value;
+  }
+
   const response = await mfApiRequest('/api/v3/invoice_template_billings', {
     method: 'POST',
-    body: JSON.stringify(billingData),
+    body: JSON.stringify(cleanData),
   });
   if (!response.ok) {
     const error = await response.text();

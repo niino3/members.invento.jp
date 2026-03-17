@@ -36,6 +36,7 @@ interface BillingRecord {
   title: string;
   memo: string;
   note: string;
+  paymentCondition: string;
   totalAmount: number;
   status: string;
   departmentId: string;
@@ -324,6 +325,7 @@ export default function BillingImportPage() {
           billingScope: 'current',
           variable: analysis.analysis?.isVariable || false,
           notes: buildNotes(analysis),
+          paymentCondition: analysis.billings.length > 0 ? analysis.billings[0].paymentCondition || '' : '',
         }),
       });
       if (!response.ok) throw new Error('Failed to save');

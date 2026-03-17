@@ -43,6 +43,7 @@ export async function GET(request: NextRequest) {
         title,
         memo: attrs.memo || '',
         note: attrs.note || '',
+        paymentCondition: attrs.payment_condition || '',
         totalAmount: attrs.total_price || 0,
         status: attrs.status || '',
         departmentId: attrs.department_id || '',
@@ -84,7 +85,7 @@ export async function GET(request: NextRequest) {
  */
 export async function POST(request: NextRequest) {
   try {
-    const { customerId, departmentId, title, items, schedule, billingScope, variable, notes } = await request.json();
+    const { customerId, departmentId, title, items, schedule, billingScope, variable, notes, paymentCondition } = await request.json();
 
     if (!customerId || !departmentId) {
       return NextResponse.json({ error: 'customerId and departmentId required' }, { status: 400 });
@@ -112,6 +113,7 @@ export async function POST(request: NextRequest) {
         items: items || [],
         variable: variable || false,
         notes: notes || '',
+        paymentCondition: paymentCondition || '',
       },
       updatedAt: admin.default.firestore.FieldValue.serverTimestamp(),
     });

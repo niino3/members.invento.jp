@@ -147,6 +147,12 @@ export async function POST(request: NextRequest) {
           due_date: dueDate,
           sales_date: salesDate,
           title: resolvedTitle,
+          payment_condition: data.mfBilling.paymentCondition
+            ? resolveTitleTemplate(data.mfBilling.paymentCondition, year, targetMonth, nextYear, nextMonth)
+            : undefined,
+          note: data.mfBilling.notes
+            ? resolveTitleTemplate(data.mfBilling.notes, year, targetMonth, nextYear, nextMonth)
+            : undefined,
           items: data.mfBilling.items.map((item: { name: string; price: number; quantity: number; excise: string }) => ({
             name: resolveTitleTemplate(item.name, year, targetMonth, nextYear, nextMonth),
             price: item.price,
