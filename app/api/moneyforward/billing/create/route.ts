@@ -123,7 +123,6 @@ export async function POST(request: NextRequest) {
       }
 
       // タイトルテンプレート変数を展開
-      const billingScope = data.mfBilling.billingScope || 'current';
       const titleTemplate = data.mfBilling.title || '{{YYYY}}年{{M}}月分 Webサイト保守管理費';
       const resolvedTitle = resolveTitleTemplate(titleTemplate, year, targetMonth, nextYear, nextMonth);
       console.log('Title debug:', { titleTemplate, resolvedTitle, year, targetMonth });

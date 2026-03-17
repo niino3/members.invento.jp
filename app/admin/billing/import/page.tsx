@@ -322,8 +322,6 @@ export default function BillingImportPage() {
           title: extractTitle(analysis.billings),
           items: analysis.suggestedItems,
           schedule: analysis.suggestedSchedule,
-          billingScope: 'current',
-          variable: analysis.analysis?.isVariable || false,
           notes: buildNotes(analysis),
           paymentCondition: analysis.billings.length > 0 ? analysis.billings[0].paymentCondition || '' : '',
         }),

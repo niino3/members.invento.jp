@@ -133,7 +133,6 @@ export async function POST(request: NextRequest) {
       await customerRef.update({
         'mfBilling.departmentId': mapping.departmentId,
         'mfBilling.schedule': existingMfBilling.schedule || { type: 'monthly', months: [] },
-        'mfBilling.billingScope': existingMfBilling.billingScope || 'current',
         'mfBilling.items': existingMfBilling.items || [],
         'mfBilling.variable': existingMfBilling.variable || false,
         'mfBilling.notes': existingMfBilling.notes || '',

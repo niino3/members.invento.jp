@@ -16,7 +16,6 @@ interface MfBilling {
   departmentId: string;
   title: string;
   schedule: { type: string; months: number[] };
-  billingScope: string;
   items: BillingItem[];
   variable: boolean;
   notes: string;
@@ -234,7 +233,6 @@ export default function BillingCustomersPage() {
                   <div className="flex gap-3 mt-1 text-sm text-gray-500">
                     <span>{getScheduleLabel(billing.schedule)}</span>
                     <span>¥{getTotalAmount(billing.items).toLocaleString()}</span>
-                    <span className="text-gray-400">{billing.billingScope === 'next' ? '次月分' : '当月分'}</span>
                   </div>
                 </div>
                 <div>
@@ -307,16 +305,6 @@ export default function BillingCustomersPage() {
                         />
                       </div>
                     )}
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1">請求対象</label>
-                      <select
-                        value={editData.billingScope}
-                        onChange={(e) => setEditData({ ...editData, billingScope: e.target.value })}
-                        className="w-full rounded border-gray-300 text-sm text-gray-900 h-9">
-                        <option value="current">当月分</option>
-                        <option value="next">次月分</option>
-                      </select>
-                    </div>
                   </div>
 
                   {/* 品目 */}
