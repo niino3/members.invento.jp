@@ -1,6 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createBilling as mfCreateBilling } from '@/lib/moneyforward';
 
+/**
+ * テンプレート変数を展開する
+ * 使用可能な変数:
+ *   {{YYYY}}  - 対象年 (例: 2026)
+ *   {{MM}}    - 対象月ゼロ埋め (例: 04)
+ *   {{M}}     - 対象月 (例: 4)
+ *   {{YYYY+1}}, {{MM+1}}, {{M+1}} - 翌月の年月
+ *   {{YYYY-1}}, {{MM-1}}, {{M-1}} - 前月の年月
+ */
+function resolveTitleTemplate(
+  template: string,
+  year: number,
+  month: number,
+  nextYear: number,
+  nextMonth: number
+): string {
+  const prevMonth = month === 1 ? 12 : month - 1;
+  const prevYear = month === 1 ? year - 1 : year;
+
+  return template
+    .replace(/\{\{YYYY\+1\}\}/g, String(nextYear))
+    .replace(/\{\{MM\+1\}\}/g, String(nextMonth).padStart(2, '0'))
+    .replace(/\{\{M\+1\}\}/g, String(nextMonth))
+    .replace(/\{\{YYYY-1\}\}/g, String(prevYear))
+    .replace(/\{\{MM-1\}\}/g, String(prevMonth).padStart(2, '0'))
+    .replace(/\{\{M-1\}\}/g, String(prevMonth))
+    .replace(/\{\{YYYY\}\}/g, String(year))
+    .replace(/\{\{MM\}\}/g, String(month).padStart(2, '0'))
+    .replace(/\{\{M\}\}/g, String(month));
+}
+
 export async function POST(request: NextRequest) {
   try {
     const { month, customerIds } = await request.json();
@@ -99,18 +130,19 @@ export async function POST(request: NextRequest) {
       try {
         // MF API で請求書作成
         const billingScope = data.mfBilling.billingScope || 'current';
-        const titleMonth = billingScope === 'next'
-          ? `${nextYear}年${nextMonth}月分`
-          : `${year}年${targetMonth}月分`;
+
+        // タイトルテンプレート変数を展開
+        const titleTemplate = data.mfBilling.title || '{{YYYY}}年{{M}}月分 Webサイト保守管理費';
+        const resolvedTitle = resolveTitleTemplate(titleTemplate, year, targetMonth, nextYear, nextMonth);
 
         const mfResult = await mfCreateBilling({
           department_id: data.mfBilling.departmentId,
           billing_date: billingDate,
           due_date: dueDate,
           sales_date: salesDate,
-          title: `${titleMonth} ${data.mfBilling.title || 'Webサイト保守管理費'}`,
+          title: resolvedTitle,
           items: data.mfBilling.items.map((item: { name: string; price: number; quantity: number; excise: string }) => ({
-            name: item.name,
+            name: resolveTitleTemplate(item.name, year, targetMonth, nextYear, nextMonth),
             price: item.price,
             quantity: item.quantity,
             excise: item.excise,

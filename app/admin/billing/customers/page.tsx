@@ -273,7 +273,12 @@ export default function BillingCustomersPage() {
                       placeholder="例: Webサイト保守管理費"
                       className="w-full rounded border-gray-300 text-sm text-gray-900 h-9 px-2"
                     />
-                    <p className="text-xs text-gray-400 mt-1">※ 請求書作成時「YYYY年M月分 {'{件名}'}」の形式で使用されます</p>
+                    <p className="text-xs text-gray-400 mt-1">
+                      テンプレート変数: {'{{YYYY}}'} 年 / {'{{M}}'} 月 / {'{{MM}}'} 月(ゼロ埋め) / {'{{M+1}}'} 翌月 / {'{{M-1}}'} 前月
+                    </p>
+                    <p className="text-xs text-gray-400">
+                      例: {'{{YYYY}}'}年{'{{M}}'}月分 保守管理費 → 2026年4月分 保守管理費
+                    </p>
                   </div>
 
                   {/* スケジュール */}
@@ -330,7 +335,7 @@ export default function BillingCustomersPage() {
                             type="text"
                             value={item.name}
                             onChange={(e) => updateItem(i, 'name', e.target.value)}
-                            placeholder="品目名"
+                            placeholder="品目名（テンプレート変数使用可）"
                             className="flex-1 rounded border-gray-300 text-sm text-gray-900 h-9 px-2"
                           />
                           <input
