@@ -82,6 +82,7 @@ export async function GET() {
         companyNameKana: c.companyNameKana,
         contractStatus: c.contractStatus,
         hasMfBilling: !!c.mfBilling,
+        mfDepartmentId: c.mfBilling?.departmentId || null,
       })),
     });
   } catch (err) {

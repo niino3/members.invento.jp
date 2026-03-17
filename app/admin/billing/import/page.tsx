@@ -36,6 +36,8 @@ interface BillingRecord {
   title: string;
   totalAmount: number;
   status: string;
+  departmentId: string;
+  partnerName: string;
   items: BillingItem[];
 }
 
@@ -171,102 +173,124 @@ export default function BillingImportPage() {
     }
   };
 
-  // Step 2: マッピング済み顧客の請求書を1件ずつ取得
+  // Step 2: 全請求書をページ単位で取得し、department_idでグルーピング
   const fetchAllBillings = async () => {
-    // Firestoreからマッピング済み顧客を取得
     setFetchingAll(true);
     setError('');
     setAnalyses([]);
 
     try {
-      // まずマッピング済み顧客一覧を取得
-      const response = await fetch('/api/moneyforward/import');
-      if (!response.ok) throw new Error('Failed to fetch customers');
-      const data = await response.json();
-      setCustomers(data.customers);
+      // 1. マッピング済み顧客一覧を取得（departmentId付き）
+      const custResponse = await fetch('/api/moneyforward/import');
+      if (!custResponse.ok) throw new Error('Failed to fetch customers');
+      const custData = await custResponse.json();
+      setCustomers(custData.customers);
 
-      // mfBilling が設定済みの顧客を抽出
-      const mappedCustomers = data.customers.filter((c: FirestoreCustomer) => c.hasMfBilling);
-
+      const mappedCustomers = (custData.customers as FirestoreCustomer[]).filter(c => c.hasMfBilling && c.mfDepartmentId);
       if (mappedCustomers.length === 0) {
         setError('マッピング済みの顧客がありません。Step 1 を先に実行してください。');
         setFetchingAll(false);
         return;
       }
 
-      setFetchProgress({ done: 0, total: mappedCustomers.length });
+      // departmentId → customer のマップ
+      const deptToCustomer: Record<string, FirestoreCustomer> = {};
+      for (const c of mappedCustomers) {
+        if (c.mfDepartmentId) deptToCustomer[c.mfDepartmentId] = c;
+      }
 
-      // 各顧客のdepartmentIdを取得するためにFirestoreから詳細を取得
-      // import APIのレスポンスにはmfDepartmentIdがないのでpartnersから逆引き
-      const mfPartnersList = data.mfPartners as MFPartner[];
+      // 2. 全請求書をページ単位で取得
+      let allBillings: BillingRecord[] = [];
+      let page = 1;
+      let hasMore = true;
 
-      // 顧客ごとに請求書データを取得
+      while (hasMore) {
+        setFetchProgress({ done: allBillings.length, total: -1 });
+        setMessage(`請求書を取得中... ${allBillings.length}件 (ページ${page})`);
+
+        const billResponse = await fetch(`/api/moneyforward/import/billings?page=${page}`);
+        if (!billResponse.ok) throw new Error(`Failed to fetch page ${page}`);
+        const billData = await billResponse.json();
+
+        allBillings = allBillings.concat(billData.billings);
+        hasMore = billData.hasMore;
+        page++;
+
+        // 安全策: 最大20ページ
+        if (page > 20) break;
+      }
+
+      setMessage(`${allBillings.length}件の請求書を取得しました。分析中...`);
+
+      // 3. department_id でグルーピング
+      const byDept: Record<string, BillingRecord[]> = {};
+      for (const b of allBillings) {
+        const deptId = (b as any).departmentId || '';
+        if (!deptId) continue;
+        if (!byDept[deptId]) byDept[deptId] = [];
+        byDept[deptId].push(b);
+      }
+
+      // 4. マッピング済み顧客ごとに分析
       const results: BillingAnalysis[] = [];
 
       for (const customer of mappedCustomers) {
-        // partnersからdepartmentIdを探す
-        let departmentId = '';
-        for (const partner of mfPartnersList) {
-          if (partner.matchedCustomerId === customer.id && partner.departments.length > 0) {
-            departmentId = partner.departments[0].id;
-            break;
+        const deptId = customer.mfDepartmentId!;
+        const billings = (byDept[deptId] || []).sort(
+          (a, b) => (b.billingDate || '').localeCompare(a.billingDate || '')
+        );
+
+        const suggestedItems = billings.length > 0 ? billings[0].items : [];
+
+        // スケジュール推定
+        const months = new Set<number>();
+        for (const b of billings) {
+          if (b.billingDate) {
+            const m = parseInt(b.billingDate.split('-')[1]);
+            if (m) months.add(m);
           }
         }
-
-        if (!departmentId) {
-          results.push({
-            departmentId: '',
-            customerName: customer.companyName,
-            customerId: customer.id,
-            totalBillings: 0,
-            billings: [],
-            suggestedItems: [],
-            suggestedSchedule: { type: 'monthly', months: [] },
-            analysis: { isVariable: false, uniqueAmounts: [], amountCount: 0, latestAmount: 0 },
-            status: 'error',
-            error: 'department_id が見つかりません',
-          });
-          setFetchProgress(prev => ({ ...prev, done: prev.done + 1 }));
-          setAnalyses([...results]);
-          continue;
+        const monthCount = months.size;
+        let suggestedSchedule: { type: string; months: number[] };
+        if (monthCount >= 10) {
+          suggestedSchedule = { type: 'monthly', months: [] };
+        } else if (monthCount >= 4 && monthCount <= 5) {
+          suggestedSchedule = { type: 'quarterly', months: Array.from(months).sort((a, b) => a - b) };
+        } else if (monthCount === 2 || monthCount === 3) {
+          suggestedSchedule = { type: 'biannual', months: Array.from(months).sort((a, b) => a - b) };
+        } else if (monthCount === 1) {
+          suggestedSchedule = { type: 'yearly', months: Array.from(months) };
+        } else {
+          suggestedSchedule = { type: 'monthly', months: [] };
         }
 
-        try {
-          const billResponse = await fetch(`/api/moneyforward/import/billings?department_id=${departmentId}`);
-          if (!billResponse.ok) throw new Error('Failed to fetch');
-          const billData = await billResponse.json();
+        // 金額変動分析
+        const amounts = billings.map(b => b.totalAmount).filter(a => a > 0);
+        const uniqueAmounts = Array.from(new Set(amounts));
+        const isVariable = uniqueAmounts.length > 2;
 
-          results.push({
-            departmentId,
-            customerName: customer.companyName,
-            customerId: customer.id,
-            totalBillings: billData.totalBillings,
-            billings: billData.billings,
-            suggestedItems: billData.suggestedItems,
-            suggestedSchedule: billData.suggestedSchedule,
-            analysis: billData.analysis,
-            status: 'loaded',
-          });
-        } catch (err) {
-          results.push({
-            departmentId,
-            customerName: customer.companyName,
-            customerId: customer.id,
-            totalBillings: 0,
-            billings: [],
-            suggestedItems: [],
-            suggestedSchedule: { type: 'monthly', months: [] },
-            analysis: { isVariable: false, uniqueAmounts: [], amountCount: 0, latestAmount: 0 },
-            status: 'error',
-            error: String(err),
-          });
-        }
-
-        setFetchProgress(prev => ({ ...prev, done: prev.done + 1 }));
-        setAnalyses([...results]);
+        results.push({
+          departmentId: deptId,
+          customerName: customer.companyName,
+          customerId: customer.id,
+          totalBillings: billings.length,
+          billings,
+          suggestedItems,
+          suggestedSchedule,
+          analysis: {
+            isVariable,
+            uniqueAmounts: uniqueAmounts.sort((a, b) => b - a),
+            amountCount: uniqueAmounts.length,
+            latestAmount: amounts[0] || 0,
+          },
+          status: billings.length > 0 ? 'loaded' : 'error',
+          error: billings.length === 0 ? '請求書が見つかりません' : undefined,
+        });
       }
 
-      setMessage(`${results.filter(r => r.status === 'loaded').length}/${mappedCustomers.length}件の請求書データを取得しました`);
+      setAnalyses(results);
+      setFetchProgress({ done: results.length, total: results.length });
+      setMessage(`${results.filter(r => r.status === 'loaded').length}/${mappedCustomers.length}件の顧客の請求データを分析しました`);
     } catch (err) {
       setError(`データ取得に失敗: ${err}`);
     } finally {

@@ -2,44 +2,24 @@ import { NextRequest, NextResponse } from 'next/server';
 import { mfApiRequest } from '@/lib/moneyforward';
 
 /**
- * GET: 特定の department_id の請求書履歴を取得して分析
- * ?department_id=xxx 必須
+ * GET: MFの請求書を1ページ分取得
+ * ?page=1 （デフォルト1、1ページ100件）
  */
 export async function GET(request: NextRequest) {
-  const departmentId = request.nextUrl.searchParams.get('department_id');
-
-  if (!departmentId) {
-    return NextResponse.json({ error: 'department_id parameter required' }, { status: 400 });
-  }
+  const page = request.nextUrl.searchParams.get('page') || '1';
 
   try {
-    // 指定 department の請求書を取得（最大3ページ=300件）
-    let allBillings: any[] = [];
-    let page = 1;
-    const maxPages = 3;
-
-    while (page <= maxPages) {
-      const response = await mfApiRequest(
-        `/api/v3/billings?department_id=${departmentId}&page=${page}&per_page=100`
-      );
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(`Failed to get billings: ${response.status} ${errorText}`);
-      }
-      const data = await response.json();
-      const billings = data.data || data;
-
-      if (Array.isArray(billings) && billings.length > 0) {
-        allBillings = allBillings.concat(billings);
-        if (billings.length < 100) break;
-        page++;
-      } else {
-        break;
-      }
+    const response = await mfApiRequest(`/api/v3/billings?page=${page}&per_page=100`);
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to get billings: ${response.status} ${errorText}`);
     }
 
+    const data = await response.json();
+    const billings = data.data || data;
+
     // 請求書データを整形
-    const parsed = allBillings.map((b: any) => {
+    const parsed = (Array.isArray(billings) ? billings : []).map((b: any) => {
       const attrs = b.attributes || b;
       return {
         id: b.id || attrs.id,
@@ -48,6 +28,8 @@ export async function GET(request: NextRequest) {
         title: attrs.title || '',
         totalAmount: attrs.total_price || 0,
         status: attrs.status || '',
+        departmentId: attrs.department_id || '',
+        partnerName: attrs.partner_name || '',
         items: (attrs.items || []).map((item: any) => ({
           name: item.name || '',
           price: item.price || 0,
@@ -57,55 +39,14 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // 日付でソート（新しい順）
-    parsed.sort((a, b) => (b.billingDate || '').localeCompare(a.billingDate || ''));
-
-    // 最新の請求書から品目を推定
-    const suggestedItems = parsed.length > 0 ? parsed[0].items : [];
-
-    // 請求月パターンからスケジュールを推定
-    const months = new Set<number>();
-    for (const b of parsed) {
-      if (b.billingDate) {
-        const m = parseInt(b.billingDate.split('-')[1]);
-        if (m) months.add(m);
-      }
-    }
-
-    const monthCount = months.size;
-    let suggestedSchedule: { type: string; months: number[] };
-    if (monthCount >= 10) {
-      suggestedSchedule = { type: 'monthly', months: [] };
-    } else if (monthCount >= 4 && monthCount <= 5) {
-      suggestedSchedule = { type: 'quarterly', months: Array.from(months).sort((a, b) => a - b) };
-    } else if (monthCount === 2 || monthCount === 3) {
-      suggestedSchedule = { type: 'biannual', months: Array.from(months).sort((a, b) => a - b) };
-    } else if (monthCount === 1) {
-      suggestedSchedule = { type: 'yearly', months: Array.from(months) };
-    } else {
-      suggestedSchedule = { type: 'monthly', months: [] };
-    }
-
-    // 金額変動の分析
-    const amounts = parsed.map(b => b.totalAmount).filter(a => a > 0);
-    const uniqueAmounts = new Set(amounts);
-    const isVariable = uniqueAmounts.size > 2; // 2種類以上の金額があれば可変
-
     return NextResponse.json({
-      departmentId,
-      totalBillings: parsed.length,
+      page: parseInt(page),
+      count: parsed.length,
+      hasMore: parsed.length >= 100,
       billings: parsed,
-      suggestedItems,
-      suggestedSchedule,
-      analysis: {
-        isVariable,
-        uniqueAmounts: Array.from(uniqueAmounts).sort((a, b) => b - a),
-        amountCount: uniqueAmounts.size,
-        latestAmount: amounts[0] || 0,
-      },
     });
   } catch (err) {
-    console.error('Billing import error:', err);
+    console.error('Billing fetch error:', err);
     return NextResponse.json(
       { error: 'Failed to fetch billings', details: String(err) },
       { status: 500 }
