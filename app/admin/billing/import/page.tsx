@@ -313,9 +313,9 @@ export default function BillingImportPage() {
           items: analysis.suggestedItems,
           schedule: analysis.suggestedSchedule,
           billingScope: 'current',
-          variable: analysis.analysis.isVariable,
-          notes: analysis.analysis.isVariable
-            ? `金額変動あり (${analysis.analysis.uniqueAmounts.map(a => '¥' + a.toLocaleString()).join(', ')})`
+          variable: analysis.analysis?.isVariable || false,
+          notes: analysis.analysis?.isVariable
+            ? `金額変動あり (${(analysis.analysis?.uniqueAmounts || []).map(a => '¥' + a.toLocaleString()).join(', ')})`
             : '',
         }),
       });
@@ -359,8 +359,8 @@ export default function BillingImportPage() {
 
   if (!user || user.role !== 'admin') return null;
 
-  const variableCustomers = analyses.filter(a => a.analysis.isVariable);
-  const fixedCustomers = analyses.filter(a => !a.analysis.isVariable && a.status === 'loaded');
+  const variableCustomers = analyses.filter(a => a.analysis?.isVariable);
+  const fixedCustomers = analyses.filter(a => a.analysis && !a.analysis.isVariable && a.status === 'loaded');
 
   return (
     <div className="space-y-6">
