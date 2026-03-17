@@ -195,6 +195,12 @@ export default function BillingPage() {
               <span className="text-sm text-green-600 font-medium">MF接続済</span>
             )}
             <Link
+              href="/admin/billing/customers"
+              className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
+            >
+              請求設定一覧
+            </Link>
+            <Link
               href="/admin/billing/import"
               className="inline-flex items-center px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50"
             >
