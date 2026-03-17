@@ -19,6 +19,7 @@ interface FirestoreCustomer {
   companyNameKana: string;
   contractStatus: string;
   hasMfBilling: boolean;
+  mfDepartmentId?: string;
 }
 
 interface BillingItem {
@@ -28,17 +29,32 @@ interface BillingItem {
   excise: string;
 }
 
-interface DepartmentBilling {
-  partnerName: string;
-  billings: {
-    id: string;
-    billingDate: string;
-    title: string;
-    totalAmount: number;
-    items: BillingItem[];
-  }[];
+interface BillingRecord {
+  id: string;
+  billingDate: string;
+  dueDate: string;
+  title: string;
+  totalAmount: number;
+  status: string;
+  items: BillingItem[];
+}
+
+interface BillingAnalysis {
+  departmentId: string;
+  customerName: string;
+  customerId: string;
+  totalBillings: number;
+  billings: BillingRecord[];
   suggestedItems: BillingItem[];
   suggestedSchedule: { type: string; months: number[] };
+  analysis: {
+    isVariable: boolean;
+    uniqueAmounts: number[];
+    amountCount: number;
+    latestAmount: number;
+  };
+  status: 'pending' | 'loading' | 'loaded' | 'saved' | 'error';
+  error?: string;
 }
 
 type Step = 'mapping' | 'billing-import';
@@ -57,9 +73,10 @@ export default function BillingImportPage() {
   const [message, setMessage] = useState('');
 
   // Step 2 の状態
-  const [departmentBillings, setDepartmentBillings] = useState<Record<string, DepartmentBilling>>({});
-  const [billingLoading, setBillingLoading] = useState(false);
-  const [savingBilling, setSavingBilling] = useState<string | null>(null);
+  const [analyses, setAnalyses] = useState<BillingAnalysis[]>([]);
+  const [fetchingAll, setFetchingAll] = useState(false);
+  const [fetchProgress, setFetchProgress] = useState({ done: 0, total: 0 });
+  const [expandedDept, setExpandedDept] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && (!user || user.role !== 'admin')) {
@@ -81,7 +98,6 @@ export default function BillingImportPage() {
       setMfPartners(data.mfPartners);
       setCustomers(data.customers);
 
-      // 自動マッチングの結果を初期マッピングに設定
       const initialMappings: Record<string, { customerId: string; departmentId: string }> = {};
       for (const partner of data.mfPartners) {
         if (partner.matchedCustomerId && partner.departments.length > 0) {
@@ -99,7 +115,6 @@ export default function BillingImportPage() {
     }
   };
 
-  // マッピングの更新
   const updateMapping = (partnerId: string, field: 'customerId' | 'departmentId', value: string) => {
     setMappings(prev => {
       const current = prev[partnerId] || { customerId: '', departmentId: '' };
@@ -108,14 +123,10 @@ export default function BillingImportPage() {
         delete next[partnerId];
         return next;
       }
-      return {
-        ...prev,
-        [partnerId]: { ...current, [field]: value },
-      };
+      return { ...prev, [partnerId]: { ...current, [field]: value } };
     });
   };
 
-  // Step 1: マッピング保存
   const saveMappings = async () => {
     const validMappings = Object.entries(mappings)
       .filter(([, m]) => m.customerId && m.departmentId)
@@ -160,59 +171,148 @@ export default function BillingImportPage() {
     }
   };
 
-  // Step 2: MF請求書履歴を取得
-  const fetchBillings = async () => {
-    setBillingLoading(true);
+  // Step 2: マッピング済み顧客の請求書を1件ずつ取得
+  const fetchAllBillings = async () => {
+    // Firestoreからマッピング済み顧客を取得
+    setFetchingAll(true);
     setError('');
+    setAnalyses([]);
+
     try {
-      const response = await fetch('/api/moneyforward/import/billings');
-      if (!response.ok) throw new Error('Failed to fetch billings');
+      // まずマッピング済み顧客一覧を取得
+      const response = await fetch('/api/moneyforward/import');
+      if (!response.ok) throw new Error('Failed to fetch customers');
       const data = await response.json();
-      setDepartmentBillings(data.departments || {});
+      setCustomers(data.customers);
+
+      // mfBilling が設定済みの顧客を抽出
+      const mappedCustomers = data.customers.filter((c: FirestoreCustomer) => c.hasMfBilling);
+
+      if (mappedCustomers.length === 0) {
+        setError('マッピング済みの顧客がありません。Step 1 を先に実行してください。');
+        setFetchingAll(false);
+        return;
+      }
+
+      setFetchProgress({ done: 0, total: mappedCustomers.length });
+
+      // 各顧客のdepartmentIdを取得するためにFirestoreから詳細を取得
+      // import APIのレスポンスにはmfDepartmentIdがないのでpartnersから逆引き
+      const mfPartnersList = data.mfPartners as MFPartner[];
+
+      // 顧客ごとに請求書データを取得
+      const results: BillingAnalysis[] = [];
+
+      for (const customer of mappedCustomers) {
+        // partnersからdepartmentIdを探す
+        let departmentId = '';
+        for (const partner of mfPartnersList) {
+          if (partner.matchedCustomerId === customer.id && partner.departments.length > 0) {
+            departmentId = partner.departments[0].id;
+            break;
+          }
+        }
+
+        if (!departmentId) {
+          results.push({
+            departmentId: '',
+            customerName: customer.companyName,
+            customerId: customer.id,
+            totalBillings: 0,
+            billings: [],
+            suggestedItems: [],
+            suggestedSchedule: { type: 'monthly', months: [] },
+            analysis: { isVariable: false, uniqueAmounts: [], amountCount: 0, latestAmount: 0 },
+            status: 'error',
+            error: 'department_id が見つかりません',
+          });
+          setFetchProgress(prev => ({ ...prev, done: prev.done + 1 }));
+          setAnalyses([...results]);
+          continue;
+        }
+
+        try {
+          const billResponse = await fetch(`/api/moneyforward/import/billings?department_id=${departmentId}`);
+          if (!billResponse.ok) throw new Error('Failed to fetch');
+          const billData = await billResponse.json();
+
+          results.push({
+            departmentId,
+            customerName: customer.companyName,
+            customerId: customer.id,
+            totalBillings: billData.totalBillings,
+            billings: billData.billings,
+            suggestedItems: billData.suggestedItems,
+            suggestedSchedule: billData.suggestedSchedule,
+            analysis: billData.analysis,
+            status: 'loaded',
+          });
+        } catch (err) {
+          results.push({
+            departmentId,
+            customerName: customer.companyName,
+            customerId: customer.id,
+            totalBillings: 0,
+            billings: [],
+            suggestedItems: [],
+            suggestedSchedule: { type: 'monthly', months: [] },
+            analysis: { isVariable: false, uniqueAmounts: [], amountCount: 0, latestAmount: 0 },
+            status: 'error',
+            error: String(err),
+          });
+        }
+
+        setFetchProgress(prev => ({ ...prev, done: prev.done + 1 }));
+        setAnalyses([...results]);
+      }
+
+      setMessage(`${results.filter(r => r.status === 'loaded').length}/${mappedCustomers.length}件の請求書データを取得しました`);
     } catch (err) {
-      setError(`請求書データの取得に失敗しました: ${err}`);
+      setError(`データ取得に失敗: ${err}`);
     } finally {
-      setBillingLoading(false);
+      setFetchingAll(false);
     }
   };
 
-  // Step 2: 個別の請求情報を保存
-  const saveBillingInfo = async (
-    customerId: string,
-    departmentId: string,
-    items: BillingItem[],
-    schedule: { type: string; months: number[] }
-  ) => {
-    setSavingBilling(departmentId);
+  // 個別の請求情報を保存
+  const saveBillingInfo = async (analysis: BillingAnalysis) => {
+    setAnalyses(prev => prev.map(a =>
+      a.departmentId === analysis.departmentId ? { ...a, status: 'loading' as const } : a
+    ));
     try {
       const response = await fetch('/api/moneyforward/import/billings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          customerId,
-          departmentId,
-          items,
-          schedule,
+          customerId: analysis.customerId,
+          departmentId: analysis.departmentId,
+          items: analysis.suggestedItems,
+          schedule: analysis.suggestedSchedule,
           billingScope: 'current',
-          variable: false,
-          notes: '',
+          variable: analysis.analysis.isVariable,
+          notes: analysis.analysis.isVariable
+            ? `金額変動あり (${analysis.analysis.uniqueAmounts.map(a => '¥' + a.toLocaleString()).join(', ')})`
+            : '',
         }),
       });
       if (!response.ok) throw new Error('Failed to save');
-      setMessage(`請求情報を保存しました`);
+      setAnalyses(prev => prev.map(a =>
+        a.departmentId === analysis.departmentId ? { ...a, status: 'saved' as const } : a
+      ));
     } catch (err) {
-      setError('請求情報の保存に失敗しました');
-    } finally {
-      setSavingBilling(null);
+      setAnalyses(prev => prev.map(a =>
+        a.departmentId === analysis.departmentId ? { ...a, status: 'error' as const, error: String(err) } : a
+      ));
     }
   };
 
-  // マッピング済みの department_id → customerId 逆引き
-  const getMappedCustomerId = (departmentId: string): string | null => {
-    for (const [, m] of Object.entries(mappings)) {
-      if (m.departmentId === departmentId) return m.customerId;
+  // 全件一括保存
+  const saveAll = async () => {
+    const targets = analyses.filter(a => a.status === 'loaded' && a.suggestedItems.length > 0);
+    for (const analysis of targets) {
+      await saveBillingInfo(analysis);
     }
-    return null;
+    setMessage(`${targets.length}件の請求情報を保存しました`);
   };
 
   const getScheduleLabel = (schedule: { type: string; months: number[] }) => {
@@ -235,6 +335,9 @@ export default function BillingImportPage() {
 
   if (!user || user.role !== 'admin') return null;
 
+  const variableCustomers = analyses.filter(a => a.analysis.isVariable);
+  const fixedCustomers = analyses.filter(a => !a.analysis.isVariable && a.status === 'loaded');
+
   return (
     <div className="space-y-6">
       {/* ヘッダー */}
@@ -254,14 +357,11 @@ export default function BillingImportPage() {
           </Link>
         </div>
 
-        {/* ステップタブ */}
         <div className="mt-4 flex gap-2">
           <button
             onClick={() => setStep('mapping')}
             className={`px-4 py-2 text-sm font-medium rounded-md ${
-              step === 'mapping'
-                ? 'bg-indigo-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              step === 'mapping' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
             Step 1: 取引先マッピング
@@ -269,49 +369,34 @@ export default function BillingImportPage() {
           <button
             onClick={() => setStep('billing-import')}
             className={`px-4 py-2 text-sm font-medium rounded-md ${
-              step === 'billing-import'
-                ? 'bg-indigo-600 text-white'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              step === 'billing-import' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
             }`}
           >
-            Step 2: 請求情報取り込み
+            Step 2: 請求履歴分析・取り込み
           </button>
         </div>
       </div>
 
-      {/* メッセージ */}
       {message && (
-        <div className="bg-green-50 border border-green-300 text-green-700 px-4 py-3 rounded">
-          {message}
-        </div>
+        <div className="bg-green-50 border border-green-300 text-green-700 px-4 py-3 rounded">{message}</div>
       )}
       {error && (
-        <div className="bg-red-50 border border-red-300 text-red-700 px-4 py-3 rounded">
-          {error}
-        </div>
+        <div className="bg-red-50 border border-red-300 text-red-700 px-4 py-3 rounded">{error}</div>
       )}
 
       {/* Step 1: 取引先マッピング */}
       {step === 'mapping' && (
         <div className="bg-white shadow rounded-lg p-6">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-medium text-gray-900">
-              MF取引先 → Firestore顧客 マッピング
-            </h2>
+            <h2 className="text-lg font-medium text-gray-900">MF取引先 → Firestore顧客 マッピング</h2>
             <div className="flex gap-2">
-              <button
-                onClick={fetchData}
-                disabled={dataLoading}
-                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:bg-gray-400"
-              >
+              <button onClick={fetchData} disabled={dataLoading}
+                className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:bg-gray-400">
                 {dataLoading ? '読み込み中...' : 'MFデータ取得'}
               </button>
               {Object.keys(mappings).length > 0 && (
-                <button
-                  onClick={saveMappings}
-                  disabled={saving}
-                  className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 disabled:bg-gray-400"
-                >
+                <button onClick={saveMappings} disabled={saving}
+                  className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700 disabled:bg-gray-400">
                   {saving ? '保存中...' : `マッピング保存 (${Object.keys(mappings).length}件)`}
                 </button>
               )}
@@ -341,11 +426,9 @@ export default function BillingImportPage() {
                         </td>
                         <td className="px-4 py-3 text-sm">
                           {partner.departments.length > 1 ? (
-                            <select
-                              value={mapping?.departmentId || ''}
+                            <select value={mapping?.departmentId || ''}
                               onChange={(e) => updateMapping(partner.id, 'departmentId', e.target.value)}
-                              className="rounded border-gray-300 text-sm text-gray-900"
-                            >
+                              className="rounded border-gray-300 text-sm text-gray-900">
                               <option value="">選択</option>
                               {partner.departments.map(d => (
                                 <option key={d.id} value={d.id}>{d.name || d.id}</option>
@@ -358,16 +441,14 @@ export default function BillingImportPage() {
                           )}
                         </td>
                         <td className="px-4 py-3 text-sm">
-                          <select
-                            value={mapping?.customerId || ''}
+                          <select value={mapping?.customerId || ''}
                             onChange={(e) => {
                               updateMapping(partner.id, 'customerId', e.target.value);
                               if (e.target.value && partner.departments.length === 1) {
                                 updateMapping(partner.id, 'departmentId', partner.departments[0].id);
                               }
                             }}
-                            className="rounded border-gray-300 text-sm text-gray-900 max-w-xs"
-                          >
+                            className="rounded border-gray-300 text-sm text-gray-900 max-w-xs">
                             <option value="">-- 未選択 --</option>
                             {customers
                               .filter(c => c.contractStatus !== 'cancelled')
@@ -393,7 +474,6 @@ export default function BillingImportPage() {
                   })}
                 </tbody>
               </table>
-
               <div className="mt-4 text-sm text-gray-500">
                 MF取引先: {mfPartners.length}件 / マッピング済: {Object.keys(mappings).length}件 / 自動マッチ: {mfPartners.filter(p => p.matchedCustomerId).length}件
               </div>
@@ -401,102 +481,184 @@ export default function BillingImportPage() {
           )}
 
           {mfPartners.length === 0 && !dataLoading && (
-            <p className="text-gray-500 text-center py-8">
-              「MFデータ取得」ボタンでMoneyForwardの取引先データを読み込みます
-            </p>
+            <p className="text-gray-500 text-center py-8">「MFデータ取得」ボタンでMoneyForwardの取引先データを読み込みます</p>
           )}
         </div>
       )}
 
-      {/* Step 2: 請求情報取り込み */}
+      {/* Step 2: 請求履歴分析 */}
       {step === 'billing-import' && (
-        <div className="bg-white shadow rounded-lg p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-lg font-medium text-gray-900">
-              請求書データから品目・スケジュールを取り込み
-            </h2>
-            <button
-              onClick={fetchBillings}
-              disabled={billingLoading}
-              className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:bg-gray-400"
-            >
-              {billingLoading ? '読み込み中...' : 'MF請求書データ取得'}
-            </button>
+        <div className="space-y-6">
+          <div className="bg-white shadow rounded-lg p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-medium text-gray-900">請求履歴分析・取り込み</h2>
+              <div className="flex gap-2">
+                <button onClick={fetchAllBillings} disabled={fetchingAll}
+                  className="px-4 py-2 text-sm font-medium text-white bg-indigo-600 rounded-md hover:bg-indigo-700 disabled:bg-gray-400">
+                  {fetchingAll ? `取得中... ${fetchProgress.done}/${fetchProgress.total}` : '請求履歴を取得・分析'}
+                </button>
+                {analyses.filter(a => a.status === 'loaded').length > 0 && (
+                  <button onClick={saveAll}
+                    className="px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-md hover:bg-green-700">
+                    全件一括保存
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* サマリー */}
+            {analyses.length > 0 && (
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div className="bg-gray-50 rounded p-3">
+                  <p className="text-sm text-gray-500">取得済み</p>
+                  <p className="text-xl font-bold">{analyses.filter(a => a.status !== 'error').length}件</p>
+                </div>
+                <div className="bg-blue-50 rounded p-3">
+                  <p className="text-sm text-blue-500">定額</p>
+                  <p className="text-xl font-bold text-blue-700">{fixedCustomers.length}件</p>
+                </div>
+                <div className="bg-yellow-50 rounded p-3">
+                  <p className="text-sm text-yellow-600">金額変動あり</p>
+                  <p className="text-xl font-bold text-yellow-700">{variableCustomers.length}件</p>
+                </div>
+                <div className="bg-red-50 rounded p-3">
+                  <p className="text-sm text-red-500">エラー</p>
+                  <p className="text-xl font-bold text-red-700">{analyses.filter(a => a.status === 'error').length}件</p>
+                </div>
+              </div>
+            )}
           </div>
 
-          {Object.entries(departmentBillings).length > 0 ? (
-            <div className="space-y-4">
-              {Object.entries(departmentBillings).map(([deptId, dept]) => {
-                const customerId = getMappedCustomerId(deptId);
-                const customer = customers.find(c => c.id === customerId);
-
-                return (
-                  <div key={deptId} className="border rounded-lg p-4">
+          {/* 金額変動ありの顧客（要確認） */}
+          {variableCustomers.length > 0 && (
+            <div className="bg-white shadow rounded-lg p-6">
+              <h3 className="text-lg font-medium text-yellow-700 mb-4">
+                要確認: 金額変動あり ({variableCustomers.length}件)
+              </h3>
+              <div className="space-y-3">
+                {variableCustomers.map((a) => (
+                  <div key={a.departmentId} className="border border-yellow-200 rounded-lg p-4 bg-yellow-50">
                     <div className="flex justify-between items-start">
                       <div>
-                        <h3 className="font-medium text-gray-900">{dept.partnerName}</h3>
-                        <p className="text-xs text-gray-500">部署ID: {deptId}</p>
-                        {customer && (
-                          <p className="text-sm text-indigo-600 mt-1">→ {customer.companyName}</p>
-                        )}
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm text-gray-600">請求書: {dept.billings.length}件</p>
-                        <p className="text-sm font-medium">
-                          スケジュール: {getScheduleLabel(dept.suggestedSchedule)}
+                        <h4 className="font-medium text-gray-900">{a.customerName}</h4>
+                        <p className="text-sm text-gray-600">
+                          請求書: {a.totalBillings}件 / スケジュール: {getScheduleLabel(a.suggestedSchedule)}
                         </p>
+                        <p className="text-sm text-yellow-700 mt-1">
+                          金額パターン: {a.analysis.uniqueAmounts.map(amt => `¥${amt.toLocaleString()}`).join(' / ')}
+                        </p>
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => setExpandedDept(expandedDept === a.departmentId ? null : a.departmentId)}
+                          className="px-3 py-1.5 text-xs font-medium text-gray-700 bg-white border border-gray-300 rounded hover:bg-gray-50"
+                        >
+                          {expandedDept === a.departmentId ? '閉じる' : '履歴を見る'}
+                        </button>
+                        <button onClick={() => saveBillingInfo(a)}
+                          disabled={a.status === 'saved'}
+                          className="px-3 py-1.5 text-xs font-medium text-white bg-green-600 rounded hover:bg-green-700 disabled:bg-gray-400">
+                          {a.status === 'saved' ? '保存済' : '保存'}
+                        </button>
                       </div>
                     </div>
 
-                    {/* 推定品目 */}
-                    {dept.suggestedItems.length > 0 && (
-                      <div className="mt-3">
-                        <p className="text-xs font-medium text-gray-500 mb-1">品目（最新請求書から）:</p>
-                        <div className="bg-gray-50 rounded p-2">
-                          {dept.suggestedItems.map((item, i) => (
-                            <div key={i} className="flex justify-between text-sm">
-                              <span className="text-gray-700">{item.name}</span>
-                              <span className="text-gray-900 font-medium">
-                                ¥{item.price.toLocaleString()} x {item.quantity}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
+                    {/* 最新の品目 */}
+                    {a.suggestedItems.length > 0 && (
+                      <div className="mt-2 bg-white rounded p-2">
+                        <p className="text-xs text-gray-500 mb-1">最新の品目:</p>
+                        {a.suggestedItems.map((item, i) => (
+                          <div key={i} className="flex justify-between text-sm">
+                            <span className="text-gray-700">{item.name}</span>
+                            <span className="font-medium">¥{item.price.toLocaleString()} x {item.quantity}</span>
+                          </div>
+                        ))}
                       </div>
                     )}
 
-                    {/* 保存ボタン */}
-                    {customer && dept.suggestedItems.length > 0 && (
-                      <div className="mt-3 flex justify-end">
-                        <button
-                          onClick={() => saveBillingInfo(
-                            customer.id,
-                            deptId,
-                            dept.suggestedItems,
-                            dept.suggestedSchedule
-                          )}
-                          disabled={savingBilling === deptId}
-                          className="px-3 py-1.5 text-sm font-medium text-white bg-green-600 rounded hover:bg-green-700 disabled:bg-gray-400"
-                        >
-                          {savingBilling === deptId ? '保存中...' : 'この顧客に保存'}
-                        </button>
+                    {/* 請求書履歴（展開） */}
+                    {expandedDept === a.departmentId && (
+                      <div className="mt-3 bg-white rounded p-3 max-h-64 overflow-y-auto">
+                        <table className="min-w-full text-sm">
+                          <thead>
+                            <tr className="text-xs text-gray-500">
+                              <th className="text-left py-1">日付</th>
+                              <th className="text-left py-1">タイトル</th>
+                              <th className="text-right py-1">金額</th>
+                              <th className="text-left py-1">品目</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {a.billings.map((b) => (
+                              <tr key={b.id} className="border-t border-gray-100">
+                                <td className="py-1 text-gray-600">{b.billingDate}</td>
+                                <td className="py-1 text-gray-700">{b.title}</td>
+                                <td className="py-1 text-right font-medium">¥{b.totalAmount.toLocaleString()}</td>
+                                <td className="py-1 text-gray-500 text-xs">
+                                  {b.items.map(i => `${i.name}(¥${i.price.toLocaleString()})`).join(', ')}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
                       </div>
                     )}
-                    {!customer && (
-                      <p className="mt-2 text-xs text-yellow-600">
-                        Step 1 でこの取引先をマッピングしてください
-                      </p>
-                    )}
                   </div>
-                );
-              })}
+                ))}
+              </div>
             </div>
-          ) : (
-            <p className="text-gray-500 text-center py-8">
-              {billingLoading
-                ? '請求書データを読み込み中...'
-                : '「MF請求書データ取得」ボタンで請求履歴を読み込みます'}
-            </p>
+          )}
+
+          {/* 定額顧客一覧 */}
+          {fixedCustomers.length > 0 && (
+            <div className="bg-white shadow rounded-lg p-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">
+                定額顧客 ({fixedCustomers.length}件)
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">顧客名</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">スケジュール</th>
+                      <th className="px-4 py-2 text-right text-xs font-medium text-gray-500 uppercase">金額</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">品目</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">請求書数</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">状態</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {fixedCustomers.map((a) => (
+                      <tr key={a.departmentId}>
+                        <td className="px-4 py-2 font-medium text-gray-900">{a.customerName}</td>
+                        <td className="px-4 py-2 text-gray-600">{getScheduleLabel(a.suggestedSchedule)}</td>
+                        <td className="px-4 py-2 text-right font-medium">¥{a.analysis.latestAmount.toLocaleString()}</td>
+                        <td className="px-4 py-2 text-gray-600 text-xs">
+                          {a.suggestedItems.map(i => i.name).join(', ')}
+                        </td>
+                        <td className="px-4 py-2 text-gray-500">{a.totalBillings}件</td>
+                        <td className="px-4 py-2">
+                          {a.status === 'saved' ? (
+                            <span className="text-green-600 text-xs font-medium">保存済</span>
+                          ) : (
+                            <button onClick={() => saveBillingInfo(a)}
+                              className="text-indigo-600 text-xs font-medium hover:underline">保存</button>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {analyses.length === 0 && !fetchingAll && (
+            <div className="bg-white shadow rounded-lg p-6">
+              <p className="text-gray-500 text-center py-8">
+                「請求履歴を取得・分析」ボタンでマッピング済み顧客の請求書データを取得します
+              </p>
+            </div>
           )}
         </div>
       )}

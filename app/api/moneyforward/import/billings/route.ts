@@ -2,26 +2,26 @@ import { NextRequest, NextResponse } from 'next/server';
 import { mfApiRequest } from '@/lib/moneyforward';
 
 /**
- * GET: MFの請求書一覧から、取引先ごとの品目・金額・スケジュールを解析して返す
- * ?department_id=xxx で特定取引先の請求書を取得
+ * GET: 特定の department_id の請求書履歴を取得して分析
+ * ?department_id=xxx 必須
  */
 export async function GET(request: NextRequest) {
   const departmentId = request.nextUrl.searchParams.get('department_id');
 
+  if (!departmentId) {
+    return NextResponse.json({ error: 'department_id parameter required' }, { status: 400 });
+  }
+
   try {
-    // 直近1年分の請求書を取得
+    // 指定 department の請求書を取得（最大3ページ=300件）
     let allBillings: any[] = [];
     let page = 1;
-    let hasMore = true;
+    const maxPages = 3;
 
-    const params = new URLSearchParams({ page: '1', per_page: '100' });
-    if (departmentId) {
-      params.set('department_id', departmentId);
-    }
-
-    while (hasMore) {
-      params.set('page', String(page));
-      const response = await mfApiRequest(`/api/v3/billings?${params.toString()}`);
+    while (page <= maxPages) {
+      const response = await mfApiRequest(
+        `/api/v3/billings?department_id=${departmentId}&page=${page}&per_page=100`
+      );
       if (!response.ok) {
         const errorText = await response.text();
         throw new Error(`Failed to get billings: ${response.status} ${errorText}`);
@@ -31,10 +31,10 @@ export async function GET(request: NextRequest) {
 
       if (Array.isArray(billings) && billings.length > 0) {
         allBillings = allBillings.concat(billings);
+        if (billings.length < 100) break;
         page++;
-        if (billings.length < 100) hasMore = false;
       } else {
-        hasMore = false;
+        break;
       }
     }
 
@@ -43,12 +43,11 @@ export async function GET(request: NextRequest) {
       const attrs = b.attributes || b;
       return {
         id: b.id || attrs.id,
-        billingDate: attrs.billing_date,
-        dueDate: attrs.due_date,
+        billingDate: attrs.billing_date || '',
+        dueDate: attrs.due_date || '',
         title: attrs.title || '',
         totalAmount: attrs.total_price || 0,
-        departmentId: attrs.department_id,
-        partnerName: attrs.partner_name || '',
+        status: attrs.status || '',
         items: (attrs.items || []).map((item: any) => ({
           name: item.name || '',
           price: item.price || 0,
@@ -58,62 +57,52 @@ export async function GET(request: NextRequest) {
       };
     });
 
-    // department_id ごとにグルーピング
-    const byDepartment: Record<string, {
-      partnerName: string;
-      billings: typeof parsed;
-      suggestedItems: { name: string; price: number; quantity: number; excise: string }[];
-      suggestedSchedule: { type: string; months: number[] };
-    }> = {};
+    // 日付でソート（新しい順）
+    parsed.sort((a, b) => (b.billingDate || '').localeCompare(a.billingDate || ''));
 
-    for (const billing of parsed) {
-      const deptId = billing.departmentId || 'unknown';
-      if (!byDepartment[deptId]) {
-        byDepartment[deptId] = {
-          partnerName: billing.partnerName,
-          billings: [],
-          suggestedItems: [],
-          suggestedSchedule: { type: 'monthly', months: [] },
-        };
-      }
-      byDepartment[deptId].billings.push(billing);
-    }
+    // 最新の請求書から品目を推定
+    const suggestedItems = parsed.length > 0 ? parsed[0].items : [];
 
-    // 各部署の品目・スケジュールを推定
-    for (const [deptId, dept] of Object.entries(byDepartment)) {
-      // 最新の請求書から品目を取得
-      const sortedBillings = dept.billings.sort(
-        (a, b) => (b.billingDate || '').localeCompare(a.billingDate || '')
-      );
-
-      if (sortedBillings.length > 0) {
-        dept.suggestedItems = sortedBillings[0].items;
-      }
-
-      // 請求月のパターンからスケジュールを推定
-      const months = new Set<number>();
-      for (const b of sortedBillings) {
-        if (b.billingDate) {
-          const m = parseInt(b.billingDate.split('-')[1]);
-          if (m) months.add(m);
-        }
-      }
-
-      const monthCount = months.size;
-      if (monthCount >= 10) {
-        dept.suggestedSchedule = { type: 'monthly', months: [] };
-      } else if (monthCount >= 4 && monthCount <= 5) {
-        dept.suggestedSchedule = { type: 'quarterly', months: Array.from(months).sort((a, b) => a - b) };
-      } else if (monthCount === 2 || monthCount === 3) {
-        dept.suggestedSchedule = { type: 'biannual', months: Array.from(months).sort((a, b) => a - b) };
-      } else if (monthCount === 1) {
-        dept.suggestedSchedule = { type: 'yearly', months: Array.from(months) };
+    // 請求月パターンからスケジュールを推定
+    const months = new Set<number>();
+    for (const b of parsed) {
+      if (b.billingDate) {
+        const m = parseInt(b.billingDate.split('-')[1]);
+        if (m) months.add(m);
       }
     }
+
+    const monthCount = months.size;
+    let suggestedSchedule: { type: string; months: number[] };
+    if (monthCount >= 10) {
+      suggestedSchedule = { type: 'monthly', months: [] };
+    } else if (monthCount >= 4 && monthCount <= 5) {
+      suggestedSchedule = { type: 'quarterly', months: Array.from(months).sort((a, b) => a - b) };
+    } else if (monthCount === 2 || monthCount === 3) {
+      suggestedSchedule = { type: 'biannual', months: Array.from(months).sort((a, b) => a - b) };
+    } else if (monthCount === 1) {
+      suggestedSchedule = { type: 'yearly', months: Array.from(months) };
+    } else {
+      suggestedSchedule = { type: 'monthly', months: [] };
+    }
+
+    // 金額変動の分析
+    const amounts = parsed.map(b => b.totalAmount).filter(a => a > 0);
+    const uniqueAmounts = new Set(amounts);
+    const isVariable = uniqueAmounts.size > 2; // 2種類以上の金額があれば可変
 
     return NextResponse.json({
-      totalBillings: allBillings.length,
-      departments: byDepartment,
+      departmentId,
+      totalBillings: parsed.length,
+      billings: parsed,
+      suggestedItems,
+      suggestedSchedule,
+      analysis: {
+        isVariable,
+        uniqueAmounts: Array.from(uniqueAmounts).sort((a, b) => b - a),
+        amountCount: uniqueAmounts.size,
+        latestAmount: amounts[0] || 0,
+      },
     });
   } catch (err) {
     console.error('Billing import error:', err);
