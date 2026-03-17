@@ -122,17 +122,6 @@ export async function POST(request: NextRequest) {
         }
       }
 
-      // 可変金額の場合はスキップ（手動入力が必要）
-      if (data.mfBilling.variable) {
-        results.push({
-          customerId: doc.id,
-          customerName: data.companyName,
-          success: false,
-          error: 'Variable amount - manual input required',
-        });
-        continue;
-      }
-
       // タイトルテンプレート変数を展開
       const billingScope = data.mfBilling.billingScope || 'current';
       const titleTemplate = data.mfBilling.title || '{{YYYY}}年{{M}}月分 Webサイト保守管理費';

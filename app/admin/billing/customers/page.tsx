@@ -234,9 +234,6 @@ export default function BillingCustomersPage() {
                   <div className="flex gap-3 mt-1 text-sm text-gray-500">
                     <span>{getScheduleLabel(billing.schedule)}</span>
                     <span>¥{getTotalAmount(billing.items).toLocaleString()}</span>
-                    {billing.variable && (
-                      <span className="text-yellow-600 font-medium">金額変動あり</span>
-                    )}
                     <span className="text-gray-400">{billing.billingScope === 'next' ? '次月分' : '当月分'}</span>
                   </div>
                 </div>
@@ -371,29 +368,6 @@ export default function BillingCustomersPage() {
                     </div>
                   </div>
 
-                  {/* その他設定 */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={editData.variable}
-                        onChange={(e) => setEditData({ ...editData, variable: e.target.checked })}
-                        className="h-4 w-4 text-indigo-600 rounded"
-                      />
-                      <label className="text-sm text-gray-700">金額変動あり（毎月手動確認が必要）</label>
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-gray-500 mb-1">備考</label>
-                      <input
-                        type="text"
-                        value={editData.notes}
-                        onChange={(e) => setEditData({ ...editData, notes: e.target.value })}
-                        className="w-full rounded border-gray-300 text-sm text-gray-900 h-9 px-2"
-                        placeholder="メモ（テンプレート変数使用可）"
-                      />
-                    </div>
-                  </div>
-
                   {/* 振込先 */}
                   <div>
                     <label className="block text-xs font-medium text-gray-500 mb-1">振込先</label>
@@ -403,6 +377,18 @@ export default function BillingCustomersPage() {
                       rows={3}
                       className="w-full rounded border-gray-300 text-sm text-gray-900 px-2 py-1"
                       placeholder="振込先口座情報（テンプレート変数使用可）"
+                    />
+                  </div>
+
+                  {/* 備考 */}
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">備考</label>
+                    <input
+                      type="text"
+                      value={editData.notes}
+                      onChange={(e) => setEditData({ ...editData, notes: e.target.value })}
+                      className="w-full rounded border-gray-300 text-sm text-gray-900 h-9 px-2"
+                      placeholder="メモ（テンプレート変数使用可）"
                     />
                   </div>
 
